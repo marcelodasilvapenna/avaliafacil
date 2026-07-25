@@ -1,16 +1,94 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<title>AvaliaFácil v0.1</title>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>AvaliaFácil v0.2</title>
+
 <link rel="stylesheet" href="css/style.css">
+
 </head>
+
 <body>
-<h1>AvaliaFácil v0.1</h1>
-<p>Base do projeto.</p>
-<button id="camera">Abrir câmera</button>
-<video id="video" autoplay playsinline></video>
+
+<header>
+
+<h1>AvaliaFácil</h1>
+
+<p class="subtitulo">
+Leitor Inteligente de Gabaritos
+</p>
+
+</header>
+
+<main>
+
+<section id="camera-area">
+
+<video
+id="video"
+autoplay
+playsinline>
+</video>
+
+<canvas
+id="canvas"
+style="display:none;">
+</canvas>
+
+<img
+id="foto"
+style="display:none;">
+
+</section>
+
+<section id="botoes">
+
+<button id="btnCamera">
+Abrir câmera
+</button>
+
+<button id="btnCapturar" disabled>
+📷 Capturar
+</button>
+
+<button id="btnConfirmar"
+style="display:none;">
+✅ Usar Foto
+</button>
+
+<button id="btnNova"
+style="display:none;">
+↺ Tirar Novamente
+</button>
+
+</section>
+
+<section id="status">
+
+Status:
+<span id="mensagem">
+
+Aguardando...
+
+</span>
+
+</section>
+
+</main>
+
+<footer>
+
+AvaliaFácil
+Versão 0.2
+
+</footer>
+
 <script src="js/camera.js"></script>
+<script src="js/capture.js"></script>
 <script src="js/app.js"></script>
+
 </body>
 </html>

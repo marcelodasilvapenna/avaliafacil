@@ -1,0 +1,1 @@
+document.getElementById('camera').onclick=abrirCamera;

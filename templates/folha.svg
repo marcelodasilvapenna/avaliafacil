@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1100">
+<rect width="800" height="1100" fill="white" stroke="black"/>
+<rect x="20" y="20" width="40" height="40" fill="black"/>
+<rect x="740" y="20" width="40" height="40" fill="black"/>
+<rect x="20" y="1040" width="40" height="40" fill="black"/>
+<rect x="740" y="1040" width="40" height="40" fill="black"/>
+<text x="100" y="60" font-size="28">MODELO INICIAL - substituir por ArUco reais</text>
+<text x="100" y="100" font-size="20">Nome: __________________</text>
+<text x="100" y="130" font-size="20">EOL: ___________________</text>
+<text x="100" y="160" font-size="20">QR Code</text>
+</svg>

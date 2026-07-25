@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>AvaliaFácil v0.2</title>
+<title>AvaliaFácil v0.3</title>
 
 <link rel="stylesheet" href="css/style.css">
 
@@ -54,12 +54,14 @@ Abrir câmera
 📷 Capturar
 </button>
 
-<button id="btnConfirmar"
+<button
+id="btnConfirmar"
 style="display:none;">
 ✅ Usar Foto
 </button>
 
-<button id="btnNova"
+<button
+id="btnNova"
 style="display:none;">
 ↺ Tirar Novamente
 </button>
@@ -82,12 +84,21 @@ Aguardando...
 <footer>
 
 AvaliaFácil
-Versão 0.2
+Versão 0.3
 
 </footer>
 
+<!-- OpenCV -->
+<script
+async
+src="https://docs.opencv.org/4.x/opencv.js"
+onload="opencvPronto();">
+</script>
+
+<!-- Scripts do projeto -->
 <script src="js/camera.js"></script>
 <script src="js/capture.js"></script>
+<script src="js/opencv.js"></script>
 <script src="js/app.js"></script>
 
 </body>

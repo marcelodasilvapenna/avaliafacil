@@ -53,12 +53,12 @@ function capturarFoto() {
  */
 function confirmarFoto() {
 
-    atualizarStatus("Foto confirmada.");
+    document.getElementById("canvas").style.display = "block";
 
-    alert(
-        "Na próxima versão começaremos\n" +
-        "a localizar automaticamente a folha."
-    );
+    document.getElementById("foto").style.display = "none";
+
+    processarImagem();
+
 
 }
 

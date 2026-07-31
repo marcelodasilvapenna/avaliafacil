@@ -1,13 +1,14 @@
 /* ===========================================
    opencv.js
    Motor principal do processamento
+   Compatível com detector.js v3.0
 =========================================== */
 
 let opencvCarregado = false;
 
-//============================================
+//==================================================
 // Inicialização do OpenCV
-//============================================
+//==================================================
 
 function opencvPronto() {
 
@@ -23,9 +24,9 @@ function opencvPronto() {
 
 }
 
-//============================================
-// Processamento da imagem
-//============================================
+//==================================================
+// Processa a imagem capturada
+//==================================================
 
 function processarImagem() {
 
@@ -40,98 +41,60 @@ function processarImagem() {
 
     const img = document.getElementById("foto");
 
-    if (!img || img.src === "") {
+    if (!img || !img.complete || img.naturalWidth === 0) {
 
-        atualizarStatus("Nenhuma imagem encontrada.");
+        atualizarStatus("Nenhuma imagem carregada.");
         return;
 
     }
 
-    //----------------------------------------
-    // Leitura
-    //----------------------------------------
+    //----------------------------------------------
+    // Lê a imagem
+    //----------------------------------------------
 
     let src = cv.imread(img);
 
-    let gray = new cv.Mat();
-    let blur = new cv.Mat();
-    let thresh = new cv.Mat();
+    //----------------------------------------------
+    // Detector de marcadores
+    //----------------------------------------------
 
-    //----------------------------------------
-    // Escala de cinza
-    //----------------------------------------
+    let resultado;
 
-    cv.cvtColor(
-        src,
-        gray,
-        cv.COLOR_RGBA2GRAY
-    );
+    try {
 
-    //----------------------------------------
-    // Suavização
-    //----------------------------------------
+        resultado = detectarMarcadores(src);
 
-    cv.GaussianBlur(
+    } catch (erro) {
 
-        gray,
+        console.error(erro);
 
-        blur,
+        atualizarStatus("Erro durante o processamento.");
 
-        new cv.Size(5,5),
+        src.delete();
 
-        0
+        return;
 
-    );
+    }
 
-    //----------------------------------------
-    // Threshold
-    //----------------------------------------
-
-    cv.threshold(
-
-        blur,
-
-        thresh,
-
-        0,
-
-        255,
-
-        cv.THRESH_BINARY_INV + cv.THRESH_OTSU
-
-    );
-
-    //----------------------------------------
-    // Detecta marcadores
-    //----------------------------------------
-
-    const resultado = detectarMarcadores(thresh);
-
-    //----------------------------------------
-    // Marcadores encontrados
-    //----------------------------------------
+    //----------------------------------------------
+    // Desenha marcadores encontrados
+    //----------------------------------------------
 
     if (resultado.encontrado) {
 
         atualizarStatus("Folha encontrada.");
 
-        resultado.marcadores.forEach(marcador => {
+        resultado.marcadores.forEach(m => {
 
             cv.circle(
 
                 src,
 
-                new cv.Point(
-
-                    marcador.cx,
-
-                    marcador.cy
-
-                ),
+                new cv.Point(m.cx, m.cy),
 
                 12,
 
-                new cv.Scalar(255,0,0,255),
+                new cv.Scalar(255, 0, 0, 255),
 
                 4
 
@@ -139,33 +102,25 @@ function processarImagem() {
 
         });
 
+        console.log("Marcadores:", resultado.marcadores);
         console.log("Score:", resultado.score);
 
-    }
+    } else {
 
-    //----------------------------------------
-    // Não encontrou
-    //----------------------------------------
-
-    else {
-
-        atualizarStatus("Não foi possível localizar a folha.");
+        atualizarStatus("Folha não encontrada.");
 
     }
 
-    //----------------------------------------
-    // Exibe resultado
-    //----------------------------------------
+    //----------------------------------------------
+    // Exibe imagem processada
+    //----------------------------------------------
 
     cv.imshow("canvas", src);
 
-    //----------------------------------------
+    //----------------------------------------------
     // Libera memória
-    //----------------------------------------
+    //----------------------------------------------
 
     src.delete();
-    gray.delete();
-    blur.delete();
-    thresh.delete();
 
 }

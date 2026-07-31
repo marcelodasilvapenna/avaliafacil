@@ -1,6 +1,6 @@
 /* ===========================================
-   AvaliaFácil
-   OpenCV.js v0.4.1
+   opencv.js
+   Motor principal do processamento
 =========================================== */
 
 let opencvCarregado = false;
@@ -28,16 +28,20 @@ function processarImagem() {
 
     }
 
+    atualizarStatus("Processando imagem...");
+
     const img = document.getElementById("foto");
 
     let src = cv.imread(img);
 
     let gray = new cv.Mat();
     let blur = new cv.Mat();
-    let edges = new cv.Mat();
+    let thresh = new cv.Mat();
 
+    // Escala de cinza
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
+    // Redução de ruído
     cv.GaussianBlur(
         gray,
         blur,
@@ -45,85 +49,47 @@ function processarImagem() {
         0
     );
 
-    cv.Canny(
+    // Imagem binária
+    cv.threshold(
         blur,
-        edges,
-        50,
-        150
+        thresh,
+        0,
+        255,
+        cv.THRESH_BINARY_INV + cv.THRESH_OTSU
     );
 
-    let contours = new cv.MatVector();
-    let hierarchy = new cv.Mat();
+    // Procura os marcadores
+    let marcadores = detectarMarcadores(thresh);
 
-    cv.findContours(
-        edges,
-        contours,
-        hierarchy,
-        cv.RETR_LIST,
-        cv.CHAIN_APPROX_SIMPLE
-    );
+    // Desenha um círculo vermelho em cada marcador encontrado
+    for(let i = 0; i < marcadores.length; i++){
 
-    let folha = null;
-    let maiorArea = 0;
+        cv.circle(
 
-    for(let i = 0; i < contours.size(); i++){
+            src,
 
-        let cnt = contours.get(i);
+            new cv.Point(
+                marcadores[i].x,
+                marcadores[i].y
+            ),
 
-        let peri = cv.arcLength(cnt, true);
+            12,
 
-        let approx = new cv.Mat();
+            new cv.Scalar(255,0,0,255),
 
-        cv.approxPolyDP(
-            cnt,
-            approx,
-            0.02 * peri,
-            true
+            4
+
         );
-
-        let area = cv.contourArea(cnt);
-
-        if(
-            approx.rows === 4 &&
-            area > maiorArea
-        ){
-
-            maiorArea = area;
-
-            folha = approx.clone();
-
-        }
-
-        approx.delete();
 
     }
 
-    if(folha != null){
+    if(marcadores.length === 4){
 
-        let folhas = new cv.MatVector();
-
-        folhas.push_back(folha);
-
-        cv.drawContours(
-            src,
-            folhas,
-            0,
-            new cv.Scalar(0,255,0,255),
-            6
-        );
-
-        atualizarStatus(
-            "Folha encontrada. Contornos: " + contours.size()
-        );
-
-        folhas.delete();
-        folha.delete();
+        atualizarStatus("Folha encontrada.");
 
     }else{
 
-        atualizarStatus(
-            "Nenhuma folha encontrada. Contornos: " + contours.size()
-        );
+        atualizarStatus("Não foi possível localizar a folha.");
 
     }
 
@@ -132,8 +98,6 @@ function processarImagem() {
     src.delete();
     gray.delete();
     blur.delete();
-    edges.delete();
-    contours.delete();
-    hierarchy.delete();
+    thresh.delete();
 
 }

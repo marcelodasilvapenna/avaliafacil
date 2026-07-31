@@ -5,6 +5,10 @@
 
 let opencvCarregado = false;
 
+//============================================
+// Inicialização do OpenCV
+//============================================
+
 function opencvPronto() {
 
     cv.onRuntimeInitialized = () => {
@@ -19,6 +23,10 @@ function opencvPronto() {
 
 }
 
+//============================================
+// Processamento da imagem
+//============================================
+
 function processarImagem() {
 
     if (!opencvCarregado) {
@@ -32,68 +40,128 @@ function processarImagem() {
 
     const img = document.getElementById("foto");
 
+    if (!img || img.src === "") {
+
+        atualizarStatus("Nenhuma imagem encontrada.");
+        return;
+
+    }
+
+    //----------------------------------------
+    // Leitura
+    //----------------------------------------
+
     let src = cv.imread(img);
 
     let gray = new cv.Mat();
     let blur = new cv.Mat();
     let thresh = new cv.Mat();
 
+    //----------------------------------------
     // Escala de cinza
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+    //----------------------------------------
 
-    // Redução de ruído
-    cv.GaussianBlur(
+    cv.cvtColor(
+        src,
         gray,
+        cv.COLOR_RGBA2GRAY
+    );
+
+    //----------------------------------------
+    // Suavização
+    //----------------------------------------
+
+    cv.GaussianBlur(
+
+        gray,
+
         blur,
+
         new cv.Size(5,5),
+
         0
+
     );
 
-    // Imagem binária
+    //----------------------------------------
+    // Threshold
+    //----------------------------------------
+
     cv.threshold(
+
         blur,
+
         thresh,
+
         0,
+
         255,
+
         cv.THRESH_BINARY_INV + cv.THRESH_OTSU
+
     );
 
-    // Procura os marcadores
-    let marcadores = detectarMarcadores(thresh);
+    //----------------------------------------
+    // Detecta marcadores
+    //----------------------------------------
 
-    // Desenha um círculo vermelho em cada marcador encontrado
-    for(let i = 0; i < marcadores.length; i++){
+    const resultado = detectarMarcadores(thresh);
 
-        cv.circle(
+    //----------------------------------------
+    // Marcadores encontrados
+    //----------------------------------------
 
-            src,
-
-            new cv.Point(
-                marcadores[i].x,
-                marcadores[i].y
-            ),
-
-            12,
-
-            new cv.Scalar(255,0,0,255),
-
-            4
-
-        );
-
-    }
-
-    if(marcadores.length === 4){
+    if (resultado.encontrado) {
 
         atualizarStatus("Folha encontrada.");
 
-    }else{
+        resultado.marcadores.forEach(marcador => {
+
+            cv.circle(
+
+                src,
+
+                new cv.Point(
+
+                    marcador.cx,
+
+                    marcador.cy
+
+                ),
+
+                12,
+
+                new cv.Scalar(255,0,0,255),
+
+                4
+
+            );
+
+        });
+
+        console.log("Score:", resultado.score);
+
+    }
+
+    //----------------------------------------
+    // Não encontrou
+    //----------------------------------------
+
+    else {
 
         atualizarStatus("Não foi possível localizar a folha.");
 
     }
 
+    //----------------------------------------
+    // Exibe resultado
+    //----------------------------------------
+
     cv.imshow("canvas", src);
+
+    //----------------------------------------
+    // Libera memória
+    //----------------------------------------
 
     src.delete();
     gray.delete();

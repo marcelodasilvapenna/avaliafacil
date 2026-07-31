@@ -1,25 +1,29 @@
 /* ==========================================================
    detector.js
    AvaliaFácil
-   Detector de Marcadores v4.0
+   Detector de Marcadores v5.0
+   ----------------------------------------------------------
+   Detecta os quatro marcadores da folha de respostas.
+   Retorno:
+   {
+       encontrado : Boolean,
+       marcadores : Array<Marcador>,
+       score      : Number
+   }
 ========================================================== */
 
 const DetectorConfig = {
 
-    // Área mínima aceita para um candidato
     AREA_MINIMA: 400,
-
-    // Área máxima (evita pegar a folha inteira)
     AREA_MAXIMA: 50000,
 
-    // Relação largura/altura permitida
     PROPORCAO_MAXIMA: 1.25,
 
-    // Distância mínima entre dois centros
     DISTANCIA_MINIMA: 40,
 
-    // Número máximo de candidatos analisados
-    MAX_CANDIDATOS: 80
+    MAX_CANDIDATOS: 80,
+
+    SCORE_MINIMO: 60
 
 };
 
@@ -47,17 +51,45 @@ class Marcador{
 
 function detectarMarcadores(src){
 
+    // Pré-processa a imagem
     const binaria = preProcessar(src);
 
+    // Localiza todos os quadrados candidatos
     let candidatos = encontrarCandidatos(binaria);
 
-    candidatos = removerDuplicados(candidatos);
-
-    const marcadores = selecionarQuatroCantos(candidatos);
-
+    // A imagem binária não será mais utilizada
     binaria.delete();
 
+    // Remove candidatos repetidos
+    candidatos = removerDuplicados(candidatos);
+
+    // Seleciona os quatro marcadores
+    const marcadores = selecionarQuatroCantos(candidatos);
+
+    // Não encontrou quatro marcadores
     if(marcadores.length !== 4){
+
+        return {
+
+            encontrado:false,
+
+            marcadores:[],
+
+            score:0
+
+        };
+
+    }
+
+    // Ordena:
+    // 0 = Superior Esquerdo
+    // 1 = Superior Direito
+    // 2 = Inferior Direito
+    // 3 = Inferior Esquerdo
+    const ordenados = ordenarMarcadores(marcadores);
+
+    // Validação geométrica
+    if(!validarGeometria(ordenados)){
 
         return{
 
@@ -71,22 +103,22 @@ function detectarMarcadores(src){
 
     }
 
-    const ordenados = ordenarMarcadores(marcadores);
+    // Calcula índice de confiança
+    const score = calcularScore(ordenados);
 
     return{
 
-        encontrado:true,
+        encontrado: score >= DetectorConfig.SCORE_MINIMO,
 
-        marcadores:ordenados,
+        marcadores: ordenados,
 
-        score:calcularScore(ordenados)
+        score: score
 
     };
 
 }
-
 //==========================================================
-// Pré-processamento
+// Pré-processamento da imagem
 //==========================================================
 
 function preProcessar(src){
@@ -97,6 +129,15 @@ function preProcessar(src){
 
     let thresh = new cv.Mat();
 
+    let kernel = cv.getStructuringElement(
+
+        cv.MORPH_RECT,
+
+        new cv.Size(3,3)
+
+    );
+
+    // Converte para tons de cinza
     cv.cvtColor(
 
         src,
@@ -107,6 +148,7 @@ function preProcessar(src){
 
     );
 
+    // Redução de ruído
     cv.GaussianBlur(
 
         gray,
@@ -119,6 +161,7 @@ function preProcessar(src){
 
     );
 
+    // Binarização automática
     cv.threshold(
 
         blur,
@@ -133,14 +176,7 @@ function preProcessar(src){
 
     );
 
-    let kernel = cv.getStructuringElement(
-
-        cv.MORPH_RECT,
-
-        new cv.Size(3,3)
-
-    );
-
+    // Fecha pequenos espaços nos marcadores
     cv.morphologyEx(
 
         thresh,
@@ -163,7 +199,7 @@ function preProcessar(src){
 
 }
 //==========================================================
-// Localiza todos os candidatos quadrados
+// Procura todos os quadrados candidatos
 //==========================================================
 
 function encontrarCandidatos(binaria){
@@ -190,17 +226,13 @@ function encontrarCandidatos(binaria){
 
     for(let i=0;i<contours.size();i++){
 
-        let cnt = contours.get(i);
+        let contorno = contours.get(i);
 
-        let area = cv.contourArea(cnt);
-
-        //------------------------------------
-        // Área
-        //------------------------------------
+        let area = cv.contourArea(contorno);
 
         if(area < DetectorConfig.AREA_MINIMA){
 
-            cnt.delete();
+            contorno.delete();
 
             continue;
 
@@ -208,151 +240,137 @@ function encontrarCandidatos(binaria){
 
         if(area > DetectorConfig.AREA_MAXIMA){
 
-            cnt.delete();
+            contorno.delete();
 
             continue;
 
         }
 
-        //------------------------------------
-        // Aproxima polígono
-        //------------------------------------
+        let perimetro = cv.arcLength(
 
-        let peri = cv.arcLength(
-
-            cnt,
+            contorno,
 
             true
 
         );
 
-        let approx = new cv.Mat();
+        let aproximacao = new cv.Mat();
 
         cv.approxPolyDP(
 
-            cnt,
+            contorno,
 
-            approx,
+            aproximacao,
 
-            0.02 * peri,
+            0.02 * perimetro,
 
             true
 
         );
 
-        //------------------------------------
         // Apenas quadriláteros
-        //------------------------------------
 
-        if(approx.rows != 4){
+        if(aproximacao.rows != 4){
 
-            approx.delete();
+            aproximacao.delete();
 
-            cnt.delete();
+            contorno.delete();
 
             continue;
 
         }
 
-        //------------------------------------
-        // Retângulo mínimo
-        //------------------------------------
+        if(!cv.isContourConvex(aproximacao)){
 
-        let rect = cv.minAreaRect(
+            aproximacao.delete();
 
-            approx
+            contorno.delete();
+
+            continue;
+
+        }
+
+        let retangulo = cv.boundingRect(
+
+            aproximacao
 
         );
 
-        let w = rect.size.width;
+        let largura = retangulo.width;
 
-        let h = rect.size.height;
+        let altura = retangulo.height;
 
-        //------------------------------------
-        // Evita divisão por zero
-        //------------------------------------
+        if(largura < 5 || altura < 5){
 
-        if(w <= 1 || h <= 1){
+            aproximacao.delete();
 
-            approx.delete();
-
-            cnt.delete();
+            contorno.delete();
 
             continue;
 
         }
 
-        //------------------------------------
-        // Proporção
-        //------------------------------------
+        let proporcao =
 
-        let proporcao = Math.max(w,h) / Math.min(w,h);
+            Math.max(largura,altura) /
 
-        if(proporcao > DetectorConfig.PROPORCAO_MAXIMA){
+            Math.min(largura,altura);
 
-            approx.delete();
+        if(proporcao >
 
-            cnt.delete();
+            DetectorConfig.PROPORCAO_MAXIMA){
 
-            continue;
+            aproximacao.delete();
 
-        }
-
-        //------------------------------------
-        // Área preenchida
-        //------------------------------------
-
-        let areaRetangulo = w * h;
-
-        let ocupacao = area / areaRetangulo;
-
-        if(ocupacao < 0.55){
-
-            approx.delete();
-
-            cnt.delete();
+            contorno.delete();
 
             continue;
 
         }
 
-        //------------------------------------
-        // Guarda candidato
-        //------------------------------------
+        // Centro do marcador
+
+        let cx =
+
+            retangulo.x +
+
+            largura/2;
+
+        let cy =
+
+            retangulo.y +
+
+            altura/2;
 
         candidatos.push(
 
             new Marcador(
 
-                rect.center.x,
+                cx,
 
-                rect.center.y,
+                cy,
 
                 area,
 
-                w,
+                largura,
 
-                h,
+                altura,
 
-                rect.angle
+                0
 
             )
 
         );
 
-        approx.delete();
+        aproximacao.delete();
 
-        cnt.delete();
+        contorno.delete();
 
     }
 
-    contours.delete();
-
     hierarchy.delete();
 
-    //------------------------------------
-    // Ordena pela maior área
-    //------------------------------------
+    contours.delete();
 
     candidatos.sort(
 
@@ -360,13 +378,13 @@ function encontrarCandidatos(binaria){
 
     );
 
-    //------------------------------------
-    // Limita quantidade
-    //------------------------------------
+    if(
 
-    if(candidatos.length >
+        candidatos.length >
 
-        DetectorConfig.MAX_CANDIDATOS){
+        DetectorConfig.MAX_CANDIDATOS
+
+    ){
 
         candidatos = candidatos.slice(
 
@@ -382,7 +400,7 @@ function encontrarCandidatos(binaria){
 
 }
 //==========================================================
-// Remove candidatos muito próximos (duplicados)
+// Remove candidatos duplicados
 //==========================================================
 
 function removerDuplicados(candidatos){
@@ -399,23 +417,36 @@ function removerDuplicados(candidatos){
 
         const atual = candidatos[i];
 
-        let duplicado = false;
+        let encontrado = false;
 
         for(let j=0;j<resultado.length;j++){
 
-            const existente = resultado[j];
+            const outro = resultado[j];
 
-            const dx = atual.cx - existente.cx;
+            const dx = atual.cx - outro.cx;
+            const dy = atual.cy - outro.cy;
 
-            const dy = atual.cy - existente.cy;
+            const distancia = Math.sqrt(
 
-            const distancia = Math.sqrt(dx*dx + dy*dy);
+                dx * dx +
 
-            if(distancia < DetectorConfig.DISTANCIA_MINIMA){
+                dy * dy
 
-                duplicado = true;
+            );
 
-                if(atual.area > existente.area){
+            if(
+
+                distancia <
+
+                DetectorConfig.DISTANCIA_MINIMA
+
+            ){
+
+                encontrado = true;
+
+                // Mantém o maior candidato
+
+                if(atual.area > outro.area){
 
                     resultado[j] = atual;
 
@@ -427,7 +458,7 @@ function removerDuplicados(candidatos){
 
         }
 
-        if(!duplicado){
+        if(!encontrado){
 
             resultado.push(atual);
 
@@ -446,7 +477,7 @@ function removerDuplicados(candidatos){
 }
 
 //==========================================================
-// Seleciona os quatro marcadores mais extremos
+// Seleciona os quatro candidatos mais extremos
 //==========================================================
 
 function selecionarQuatroCantos(candidatos){
@@ -459,8 +490,8 @@ function selecionarQuatroCantos(candidatos){
 
     let superiorEsquerdo = null;
     let superiorDireito = null;
-    let inferiorEsquerdo = null;
     let inferiorDireito = null;
+    let inferiorEsquerdo = null;
 
     let menorSoma = Number.POSITIVE_INFINITY;
     let maiorSoma = Number.NEGATIVE_INFINITY;
@@ -468,73 +499,69 @@ function selecionarQuatroCantos(candidatos){
     let menorDif = Number.POSITIVE_INFINITY;
     let maiorDif = Number.NEGATIVE_INFINITY;
 
-    candidatos.forEach(c=>{
+    for(const candidato of candidatos){
 
-        const soma = c.cx + c.cy;
-        const diferenca = c.cx - c.cy;
+        const soma = candidato.cx + candidato.cy;
+
+        const diferenca = candidato.cx - candidato.cy;
 
         if(soma < menorSoma){
 
             menorSoma = soma;
-            superiorEsquerdo = c;
+            superiorEsquerdo = candidato;
 
         }
 
         if(soma > maiorSoma){
 
             maiorSoma = soma;
-            inferiorDireito = c;
-
-        }
-
-        if(diferenca < menorDif){
-
-            menorDif = diferenca;
-            inferiorEsquerdo = c;
+            inferiorDireito = candidato;
 
         }
 
         if(diferenca > maiorDif){
 
             maiorDif = diferenca;
-            superiorDireito = c;
+            superiorDireito = candidato;
 
         }
 
-    });
+        if(diferenca < menorDif){
 
-    let marcadores = [
+            menorDif = diferenca;
+            inferiorEsquerdo = candidato;
+
+        }
+
+    }
+
+    const marcadores = [
 
         superiorEsquerdo,
+
         superiorDireito,
+
         inferiorDireito,
+
         inferiorEsquerdo
 
     ];
 
-    //------------------------------------------------------
-    // Remove possíveis repetições
-    //------------------------------------------------------
+    // Verifica se há repetição do mesmo objeto
 
-    let unicos = [];
+    const unicos = [];
 
-    marcadores.forEach(m=>{
+    for(const marcador of marcadores){
 
-        if(!m){
+        if(!unicos.includes(marcador)){
 
-            return;
+            unicos.push(marcador);
 
         }
 
-        if(!unicos.includes(m)){
+    }
 
-            unicos.push(m);
-
-        }
-
-    });
-
-    if(unicos.length != 4){
+    if(unicos.length !== 4){
 
         return [];
 
@@ -544,229 +571,282 @@ function selecionarQuatroCantos(candidatos){
 
 }
 //==========================================================
-// Remove candidatos muito próximos (duplicados)
+// Ordena os marcadores na sequência:
+// 0 = Superior Esquerdo
+// 1 = Superior Direito
+// 2 = Inferior Direito
+// 3 = Inferior Esquerdo
 //==========================================================
 
-function removerDuplicados(candidatos){
+function ordenarMarcadores(marcadores){
 
-    if(candidatos.length <= 1){
+    if(marcadores.length !== 4){
 
-        return candidatos;
-
-    }
-
-    let resultado = [];
-
-    for(let i=0;i<candidatos.length;i++){
-
-        const atual = candidatos[i];
-
-        let duplicado = false;
-
-        for(let j=0;j<resultado.length;j++){
-
-            const existente = resultado[j];
-
-            const dx = atual.cx - existente.cx;
-
-            const dy = atual.cy - existente.cy;
-
-            const distancia = Math.sqrt(dx*dx + dy*dy);
-
-            if(distancia < DetectorConfig.DISTANCIA_MINIMA){
-
-                duplicado = true;
-
-                if(atual.area > existente.area){
-
-                    resultado[j] = atual;
-
-                }
-
-                break;
-
-            }
-
-        }
-
-        if(!duplicado){
-
-            resultado.push(atual);
-
-        }
+        return [];
 
     }
 
-    resultado.sort(
+    let pontos = [...marcadores];
 
-        (a,b)=>b.area-a.area
+    pontos.sort((a,b)=>a.cy-b.cy);
+
+    let superiores = pontos.slice(0,2);
+
+    let inferiores = pontos.slice(2,4);
+
+    superiores.sort((a,b)=>a.cx-b.cx);
+
+    inferiores.sort((a,b)=>a.cx-b.cx);
+
+    return [
+
+        superiores[0],
+
+        superiores[1],
+
+        inferiores[1],
+
+        inferiores[0]
+
+    ];
+
+}
+
+//==========================================================
+// Distância entre dois marcadores
+//==========================================================
+
+function distancia(a,b){
+
+    const dx = a.cx - b.cx;
+
+    const dy = a.cy - b.cy;
+
+    return Math.sqrt(
+
+        dx*dx +
+
+        dy*dy
 
     );
 
-    return resultado;
-
 }
 
 //==========================================================
-// Seleciona os quatro marcadores mais extremos
+// Verifica se os quatro marcadores formam um quadrilátero
+// compatível com uma folha A4
 //==========================================================
 
-function selecionarQuatroCantos(candidatos){
+function validarGeometria(marcadores){
 
-    if(candidatos.length < 4){
+    if(marcadores.length !== 4){
 
-        return [];
+        return false;
 
     }
 
-    let superiorEsquerdo = null;
-    let superiorDireito = null;
-    let inferiorEsquerdo = null;
-    let inferiorDireito = null;
+    const tl = marcadores[0];
 
-    let menorSoma = Number.POSITIVE_INFINITY;
-    let maiorSoma = Number.NEGATIVE_INFINITY;
+    const tr = marcadores[1];
 
-    let menorDif = Number.POSITIVE_INFINITY;
-    let maiorDif = Number.NEGATIVE_INFINITY;
+    const br = marcadores[2];
 
-    candidatos.forEach(c=>{
+    const bl = marcadores[3];
 
-        const soma = c.cx + c.cy;
-        const diferenca = c.cx - c.cy;
+    const larguraSuperior = distancia(tl,tr);
 
-        if(soma < menorSoma){
+    const larguraInferior = distancia(bl,br);
 
-            menorSoma = soma;
-            superiorEsquerdo = c;
+    const alturaEsquerda = distancia(tl,bl);
 
-        }
+    const alturaDireita = distancia(tr,br);
 
-        if(soma > maiorSoma){
+    if(
 
-            maiorSoma = soma;
-            inferiorDireito = c;
+        larguraSuperior < 100 ||
 
-        }
+        larguraInferior < 100 ||
 
-        if(diferenca < menorDif){
+        alturaEsquerda < 100 ||
 
-            menorDif = diferenca;
-            inferiorEsquerdo = c;
+        alturaDireita < 100
 
-        }
+    ){
 
-        if(diferenca > maiorDif){
-
-            maiorDif = diferenca;
-            superiorDireito = c;
-
-        }
-
-    });
-
-    let marcadores = [
-
-        superiorEsquerdo,
-        superiorDireito,
-        inferiorDireito,
-        inferiorEsquerdo
-
-    ];
-
-    //------------------------------------------------------
-    // Remove possíveis repetições
-    //------------------------------------------------------
-
-    let unicos = [];
-
-    marcadores.forEach(m=>{
-
-        if(!m){
-
-            return;
-
-        }
-
-        if(!unicos.includes(m)){
-
-            unicos.push(m);
-
-        }
-
-    });
-
-    if(unicos.length != 4){
-
-        return [];
+        return false;
 
     }
 
-    return unicos;
+    const erroHorizontal =
+
+        Math.abs(
+
+            larguraSuperior -
+
+            larguraInferior
+
+        ) /
+
+        Math.max(
+
+            larguraSuperior,
+
+            larguraInferior
+
+        );
+
+    const erroVertical =
+
+        Math.abs(
+
+            alturaEsquerda -
+
+            alturaDireita
+
+        ) /
+
+        Math.max(
+
+            alturaEsquerda,
+
+            alturaDireita
+
+        );
+
+    if(erroHorizontal > 0.35){
+
+        return false;
+
+    }
+
+    if(erroVertical > 0.35){
+
+        return false;
+
+    }
+
+    const diagonal1 = distancia(tl,br);
+
+    const diagonal2 = distancia(tr,bl);
+
+    const erroDiagonal =
+
+        Math.abs(
+
+            diagonal1 -
+
+            diagonal2
+
+        ) /
+
+        Math.max(
+
+            diagonal1,
+
+            diagonal2
+
+        );
+
+    if(erroDiagonal > 0.30){
+
+        return false;
+
+    }
+
+    return true;
 
 }
 //==========================================================
-// Ajuste final da detecção
+// Calcula um índice de confiança da detecção
 //==========================================================
 
-// SUBSTITUA, dentro da função detectarMarcadores(), este trecho:
-//
-// const ordenados = ordenarMarcadores(marcadores);
-//
-// return{
-//
-//     encontrado:true,
-//
-//     marcadores:ordenados,
-//
-//     score:calcularScore(ordenados)
-//
-// };
-//
-// PELO BLOCO ABAIXO:
+function calcularScore(marcadores){
 
-const ordenados = ordenarMarcadores(marcadores);
+    if(marcadores.length !== 4){
 
-if(!validarGeometria(ordenados)){
+        return 0;
 
-    return{
+    }
 
-        encontrado:false,
+    const tl = marcadores[0];
+    const tr = marcadores[1];
+    const br = marcadores[2];
+    const bl = marcadores[3];
 
-        marcadores:[],
+    const larguraSuperior = distancia(tl,tr);
+    const larguraInferior = distancia(bl,br);
 
-        score:0
+    const alturaEsquerda = distancia(tl,bl);
+    const alturaDireita = distancia(tr,br);
 
-    };
+    const mediaHorizontal =
+
+        (larguraSuperior + larguraInferior) / 2;
+
+    const mediaVertical =
+
+        (alturaEsquerda + alturaDireita) / 2;
+
+    const erroHorizontal =
+
+        Math.abs(
+
+            larguraSuperior -
+
+            larguraInferior
+
+        ) / mediaHorizontal;
+
+    const erroVertical =
+
+        Math.abs(
+
+            alturaEsquerda -
+
+            alturaDireita
+
+        ) / mediaVertical;
+
+    const diagonal1 = distancia(tl,br);
+
+    const diagonal2 = distancia(tr,bl);
+
+    const mediaDiagonal =
+
+        (diagonal1 + diagonal2) / 2;
+
+    const erroDiagonal =
+
+        Math.abs(
+
+            diagonal1 -
+
+            diagonal2
+
+        ) / mediaDiagonal;
+
+    let score = 100;
+
+    score -= erroHorizontal * 40;
+
+    score -= erroVertical * 40;
+
+    score -= erroDiagonal * 20;
+
+    score = Math.max(
+
+        0,
+
+        Math.min(
+
+            100,
+
+            score
+
+        )
+
+    );
+
+    return Math.round(score);
 
 }
-
-if(!validarAreaFolha(ordenados,src)){
-
-    return{
-
-        encontrado:false,
-
-        marcadores:[],
-
-        score:0
-
-    };
-
-}
-
-const score = calcularScore(ordenados);
-
-return{
-
-    encontrado: score >= 60,
-
-    marcadores: ordenados,
-
-    score: score
-
-};
-
-//==========================================================
-// Fim do detector.js
-//==========================================================

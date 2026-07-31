@@ -1,26 +1,35 @@
-/* =====================================================
+/* ==========================================================
    detector.js
    AvaliaFácil
-   Versão 2.0
-   Detecta os quatro marcadores do Provão Afrânio
-===================================================== */
+   Detector de Marcadores v3.0
+========================================================== */
 
-class Marcador {
+const DetectorConfig = {
 
-    constructor(cx, cy, area, largura, altura, angulo) {
+    AREA_MINIMA: 500,
+    PROPORCAO_MAXIMA: 1.30,
+    MAX_CANDIDATOS: 20
 
-        this.cx = cx;
-        this.cy = cy;
-        this.area = area;
-        this.largura = largura;
-        this.altura = altura;
-        this.angulo = angulo;
+};
+
+//==========================================================
+
+class Marcador{
+
+    constructor(cx,cy,area,w,h,angulo){
+
+        this.cx=cx;
+        this.cy=cy;
+        this.area=area;
+        this.w=w;
+        this.h=h;
+        this.angulo=angulo;
 
     }
 
 }
 
-//=====================================================
+//==========================================================
 
 function detectarMarcadores(src){
 
@@ -28,23 +37,43 @@ function detectarMarcadores(src){
 
     let candidatos = encontrarQuadrados(binaria);
 
-    let marcadores = selecionarMarcadores(candidatos);
+    let marcadores = selecionarMelhorGrupo(candidatos);
 
-    if(binaria) binaria.delete();
+    binaria.delete();
 
-    return ordenarMarcadores(marcadores);
+    if(marcadores.length!==4){
+
+        return{
+
+            encontrado:false,
+            marcadores:[],
+            score:0
+
+        };
+
+    }
+
+    marcadores = ordenarMarcadores(marcadores);
+
+    return{
+
+        encontrado:true,
+        marcadores:marcadores,
+        score:calcularScore(marcadores)
+
+    };
 
 }
 
-//=====================================================
+//==========================================================
 
 function preProcessar(src){
 
-    let gray = new cv.Mat();
-    let blur = new cv.Mat();
-    let thresh = new cv.Mat();
+    let gray=new cv.Mat();
+    let blur=new cv.Mat();
+    let thresh=new cv.Mat();
 
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+    cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);
 
     cv.GaussianBlur(
         gray,
@@ -58,7 +87,7 @@ function preProcessar(src){
         thresh,
         0,
         255,
-        cv.THRESH_BINARY_INV + cv.THRESH_OTSU
+        cv.THRESH_BINARY_INV+cv.THRESH_OTSU
     );
 
     gray.delete();
@@ -68,12 +97,12 @@ function preProcessar(src){
 
 }
 
-//=====================================================
+//==========================================================
 
 function encontrarQuadrados(binaria){
 
-    let contours = new cv.MatVector();
-    let hierarchy = new cv.Mat();
+    let contours=new cv.MatVector();
+    let hierarchy=new cv.Mat();
 
     cv.findContours(
         binaria,
@@ -83,52 +112,54 @@ function encontrarQuadrados(binaria){
         cv.CHAIN_APPROX_SIMPLE
     );
 
-    let candidatos = [];
+    let lista=[];
 
     for(let i=0;i<contours.size();i++){
 
-        let cnt = contours.get(i);
+        let cnt=contours.get(i);
 
-        let area = cv.contourArea(cnt);
+        let area=cv.contourArea(cnt);
 
-        if(area < 500){
+        if(area<DetectorConfig.AREA_MINIMA){
 
             cnt.delete();
             continue;
 
         }
 
-        let perimetro = cv.arcLength(cnt,true);
+        let peri=cv.arcLength(cnt,true);
 
-        let approx = new cv.Mat();
+        let approx=new cv.Mat();
 
         cv.approxPolyDP(
             cnt,
             approx,
-            0.02*perimetro,
+            0.02*peri,
             true
         );
 
-        if(approx.rows==4){
+        if(approx.rows===4){
 
-            let rot = cv.minAreaRect(approx);
+            let r=cv.minAreaRect(approx);
 
-            let w = rot.size.width;
-            let h = rot.size.height;
+            let w=r.size.width;
+            let h=r.size.height;
 
-            let proporcao = Math.max(w,h)/Math.min(w,h);
+            let proporcao=Math.max(w,h)/Math.min(w,h);
 
-            if(proporcao < 1.3){
+            if(proporcao<DetectorConfig.PROPORCAO_MAXIMA){
 
-                candidatos.push(
+                lista.push(
 
                     new Marcador(
-                        rot.center.x,
-                        rot.center.y,
+
+                        r.center.x,
+                        r.center.y,
                         area,
                         w,
                         h,
-                        rot.angle
+                        r.angle
+
                     )
 
                 );
@@ -145,45 +176,72 @@ function encontrarQuadrados(binaria){
     contours.delete();
     hierarchy.delete();
 
-    return candidatos;
+    lista.sort((a,b)=>b.area-a.area);
+
+    return lista.slice(0,DetectorConfig.MAX_CANDIDATOS);
 
 }
 
-//=====================================================
+//==========================================================
 
-function selecionarMarcadores(candidatos){
+function selecionarMelhorGrupo(candidatos){
 
-    candidatos.sort((a,b)=>b.area-a.area);
+    if(candidatos.length<4)
+        return [];
 
-    if(candidatos.length>4){
+    /*
+      VERSÃO 3.0
 
-        candidatos=candidatos.slice(0,4);
+      Atualmente devolvemos os quatro maiores.
 
-    }
+      Na próxima versão este método testará todas
+      as combinações possíveis e escolherá o grupo
+      que melhor forma um retângulo.
 
-    return candidatos;
+    */
+
+    return candidatos.slice(0,4);
 
 }
 
-//=====================================================
+//==========================================================
 
 function ordenarMarcadores(lista){
 
-    if(lista.length!=4)
-        return lista;
+    let soma=lista.map(p=>p.cx+p.cy);
 
-    let soma = lista.map(p=>p.cx+p.cy);
+    let dif=lista.map(p=>p.cx-p.cy);
 
-    let diferenca = lista.map(p=>p.cx-p.cy);
+    let tl=lista[soma.indexOf(Math.min(...soma))];
 
-    let tl = lista[soma.indexOf(Math.min(...soma))];
+    let br=lista[soma.indexOf(Math.max(...soma))];
 
-    let br = lista[soma.indexOf(Math.max(...soma))];
+    let tr=lista[dif.indexOf(Math.max(...dif))];
 
-    let tr = lista[diferenca.indexOf(Math.max(...diferenca))];
+    let bl=lista[dif.indexOf(Math.min(...dif))];
 
-    let bl = lista[diferenca.indexOf(Math.min(...diferenca))];
+    return[tl,tr,br,bl];
 
-    return [tl,tr,br,bl];
+}
+
+//==========================================================
+
+function calcularScore(lista){
+
+    /*
+      Placeholder.
+
+      Futuramente calculará:
+
+      • alinhamento
+      • áreas semelhantes
+      • ângulos
+      • proporcionalidade
+
+      Retornará 0–100.
+
+    */
+
+    return 100;
 
 }

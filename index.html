@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>PROVÃO AFRÂNIO 03 de agosto</title>
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="css/style.css">
+<title>AvaliaFácil v0.4</title>
+
+<link rel="stylesheet"
+      href="css/style.css">
 
 </head>
 
@@ -15,7 +19,7 @@
 
 <header>
 
-<h1>Provão Afrânio</h1>
+<h1>AvaliaFácil</h1>
 
 <p class="subtitulo">
 Leitor Inteligente de Gabaritos
@@ -28,19 +32,19 @@ Leitor Inteligente de Gabaritos
 <section id="camera-area">
 
 <video
-id="video"
-autoplay
-playsinline>
+    id="video"
+    autoplay
+    playsinline>
 </video>
 
 <canvas
-id="canvas"
-style="display:none;">
+    id="canvas"
+    style="display:none;">
 </canvas>
 
 <img
-id="foto"
-style="display:none;">
+    id="foto"
+    style="display:none;">
 
 </section>
 
@@ -50,20 +54,28 @@ style="display:none;">
 Abrir câmera
 </button>
 
-<button id="btnCapturar" disabled>
+<button
+    id="btnCapturar"
+    disabled>
+
 📷 Capturar
+
 </button>
 
 <button
-id="btnConfirmar"
-style="display:none;">
+    id="btnConfirmar"
+    style="display:none;">
+
 ✅ Usar Foto
+
 </button>
 
 <button
-id="btnNova"
-style="display:none;">
+    id="btnNova"
+    style="display:none;">
+
 ↺ Tirar Novamente
+
 </button>
 
 </section>
@@ -71,6 +83,7 @@ style="display:none;">
 <section id="status">
 
 Status:
+
 <span id="mensagem">
 
 Aguardando...
@@ -84,22 +97,39 @@ Aguardando...
 <footer>
 
 AvaliaFácil
-Versão 0.3
+
+Versão 0.4
 
 </footer>
 
+<!-- ===================================================== -->
 <!-- OpenCV -->
+<!-- ===================================================== -->
+
 <script
 async
 src="https://docs.opencv.org/4.x/opencv.js"
 onload="opencvPronto();">
 </script>
 
-<!-- Scripts do projeto -->
+<!-- ===================================================== -->
+<!-- Ordem dos scripts é importante -->
+<!-- ===================================================== -->
+
 <script src="js/camera.js"></script>
+
 <script src="js/capture.js"></script>
+
 <script src="js/detector.js"></script>
+
+<script src="js/perspective.js"></script>
+
+<script src="js/readers.js"></script>
+
 <script src="js/opencv.js"></script>
+
 <script src="js/app.js"></script>
+
 </body>
+
 </html>

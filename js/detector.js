@@ -487,7 +487,7 @@ function encontrarCandidatos(binaria){
 
         let cy =
 
-            rect.y +
+            rect.y + 
 
             altura/2;
 
@@ -573,7 +573,9 @@ function encontrarCandidatos(binaria){
 
 /* ==========================================================
    FIM DA PARTE 3
-/ inicio da parte 4
+
+   Início da parte 4
+========================================================== */
 /* ==========================================================
    detector.js
    AvaliaFácil
@@ -870,17 +872,6 @@ function selecionarQuatroCantos(candidatos){
     ];
 
 }
-
-/* ==========================================================
-   FIM DA PARTE 4
-
-   Próxima parte:
-
-   function ordenarMarcadores()
-
-   function validarGeometria()
-
-========================================================== */
 
 /* ==========================================================
    FIM DA PARTE 4

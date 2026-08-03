@@ -99,18 +99,21 @@ function detectarMarcadores(src){
 
     if(marcadores.length !== 4){
 
-        return{
+    console.log("ERRO 1");
 
-            encontrado:false,
+    console.log("Quantidade:", marcadores.length);
 
-            marcadores:[],
+    return{
 
-            score:0
+        encontrado:false,
 
-        };
+        marcadores:[],
 
-    }
+        score:0
 
+    };
+
+}
     //--------------------------------------
     // Ordena
     //--------------------------------------
@@ -123,18 +126,19 @@ function detectarMarcadores(src){
 
     if(!validarGeometria(ordenados)){
 
-        return{
+    console.log("ERRO 2");
 
-            encontrado:false,
+    return{
 
-            marcadores:[],
+        encontrado:false,
 
-            score:0
+        marcadores:[],
 
-        };
+        score:0
 
-    }
+    };
 
+}
     //--------------------------------------
     // Retorno
     //--------------------------------------

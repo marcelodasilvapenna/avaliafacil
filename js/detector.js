@@ -171,10 +171,11 @@ function detectarMarcadores(src){
 //==========================================================
 // Pré-processamento da imagem
 //==========================================================
-
 function preProcessar(src){
 
     let gray = new cv.Mat();
+
+    let equal = new cv.Mat();
 
     let blur = new cv.Mat();
 
@@ -195,56 +196,70 @@ function preProcessar(src){
     );
 
     //--------------------------------------
+    // Equalização do contraste
+    //--------------------------------------
+
+    cv.equalizeHist(
+
+        gray,
+
+        equal
+
+    );
+
+    //--------------------------------------
     // Redução de ruído
     //--------------------------------------
 
     cv.GaussianBlur(
 
-        gray,
+        equal,
 
         blur,
 
         new cv.Size(5,5),
 
-        0,
-
-        0,
-
-        cv.BORDER_DEFAULT
+        0
 
     );
 
     //--------------------------------------
-    // Binarização automática
+    // Threshold adaptativo
     //--------------------------------------
 
-    cv.threshold(
+    cv.adaptiveThreshold(
 
         blur,
 
         thresh,
 
-        0,
-
         255,
 
-        cv.THRESH_BINARY_INV +
+        cv.ADAPTIVE_THRESH_GAUSSIAN_C,
 
-        cv.THRESH_OTSU
+        cv.THRESH_BINARY_INV,
+
+        31,
+
+        10
 
     );
 
     //--------------------------------------
-    // Fechamento morfológico
+    // Kernel
     //--------------------------------------
 
     let kernel = cv.getStructuringElement(
 
         cv.MORPH_RECT,
 
-        new cv.Size(3,3)
+        new cv.Size(5,5)
 
     );
+
+    //--------------------------------------
+    // Fecha pequenos buracos
+    //--------------------------------------
 
     cv.morphologyEx(
 
@@ -259,10 +274,28 @@ function preProcessar(src){
     );
 
     //--------------------------------------
-    // Limpeza de memória
+    // Remove pequenos ruídos
+    //--------------------------------------
+
+    cv.morphologyEx(
+
+        thresh,
+
+        thresh,
+
+        cv.MORPH_OPEN,
+
+        kernel
+
+    );
+
+    //--------------------------------------
+    // Libera memória
     //--------------------------------------
 
     gray.delete();
+
+    equal.delete();
 
     blur.delete();
 
@@ -272,7 +305,7 @@ function preProcessar(src){
     // Diagnóstico
     //--------------------------------------
 
-    console.log("Pré-processamento concluído.");
+    console.log("Pré-processamento v2 concluído.");
 
     //--------------------------------------
     // Retorno

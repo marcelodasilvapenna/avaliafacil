@@ -56,8 +56,22 @@ function processarImagem(){
 
         let resultado = detectarMarcadores(src);
 
-        if(!resultado.encontrado){
+console.log("================================");
+console.log("RETORNO DO DETECTOR");
+console.log(resultado);
+console.log("Encontrado:", resultado.encontrado);
+console.log("Marcadores:", resultado.marcadores.length);
+console.log("Score:", resultado.score);
+console.log("================================");
 
+atualizarStatus(
+    "E=" +
+    resultado.encontrado +
+    " M=" +
+    resultado.marcadores.length
+);
+
+if(!resultado.encontrado){
             atualizarStatus("Folha não encontrada.");
 
             img.style.display = "none";

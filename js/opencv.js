@@ -1,6 +1,6 @@
 /* ===========================================
    opencv.js
-   AvaliaFácil v0.6 DEBUG
+   AvaliaFácil v0.6
 =========================================== */
 
 let opencvCarregado = false;
@@ -25,188 +25,190 @@ function opencvPronto(){
 
 function processarImagem(){
 
-    if(!opencvCarregado){
-
-        alert("OpenCV ainda não foi carregado.");
-
-        return;
-
-    }
-
-    atualizarStatus("1 - Processando imagem...");
-
-    const img = document.getElementById("foto");
-
-    if(!img){
-
-        atualizarStatus("Imagem não encontrada.");
-
-        return;
-
-    }
-
-    //------------------------------------------
-    // Lê imagem
-    //------------------------------------------
-
-    let src = cv.imread(img);
-
-    atualizarStatus("2 - Imagem carregada.");
-
-    //------------------------------------------
-    // Detector
-    //------------------------------------------
-
-    let resultado;
-
     try{
 
-        resultado = detectarMarcadores(src);
+        //--------------------------------------
+        // OpenCV
+        //--------------------------------------
 
-    }catch(e){
+        if(!opencvCarregado){
 
-        console.error(e);
+            atualizarStatus("OpenCV não carregado.");
 
-        atualizarStatus("ERRO no detector.");
+            return;
 
-        src.delete();
+        }
 
-        return;
+        //--------------------------------------
+        // Foto
+        //--------------------------------------
 
-    }
+        const img = document.getElementById("foto");
 
-    //------------------------------------------
+        if(!img){
 
-    if(!resultado.encontrado){
+            atualizarStatus("Imagem não encontrada.");
 
-        atualizarStatus("Folha não encontrada.");
+            return;
 
-        cv.imshow("canvas",src);
+        }
 
-        src.delete();
+        atualizarStatus("Processando imagem...");
 
-        return;
+        //--------------------------------------
+        // Lê imagem
+        //--------------------------------------
 
-    }
+        let src = cv.imread(img);
 
-    atualizarStatus("3 - Marcadores encontrados.");
+        //--------------------------------------
+        // Detector
+        //--------------------------------------
 
-    //------------------------------------------
-    // Desenha marcadores
-    //------------------------------------------
+        let resultado = detectarMarcadores(src);
 
-    resultado.marcadores.forEach(m=>{
+        if(!resultado.encontrado){
 
-        cv.circle(
+            atualizarStatus("Folha não encontrada.");
 
-            src,
+            cv.imshow("canvas",src);
 
-            new cv.Point(m.cx,m.cy),
+            src.delete();
 
-            12,
+            return;
 
-            new cv.Scalar(255,0,0,255),
+        }
 
-            4
+        //--------------------------------------
+        // Desenha marcadores
+        //--------------------------------------
+
+        resultado.marcadores.forEach(m=>{
+
+            cv.circle(
+
+                src,
+
+                new cv.Point(
+
+                    m.cx,
+
+                    m.cy
+
+                ),
+
+                12,
+
+                new cv.Scalar(
+
+                    255,
+
+                    0,
+
+                    0,
+
+                    255
+
+                ),
+
+                4
+
+            );
+
+        });
+
+        atualizarStatus("Folha encontrada.");
+
+        //--------------------------------------
+        // Mostra imagem original
+        //--------------------------------------
+
+        cv.imshow(
+
+            "canvas",
+
+            src
 
         );
 
-    });
+        //--------------------------------------
+        // Perspective
+        //--------------------------------------
 
-    cv.imshow("canvas",src);
+        console.log("Iniciando perspective...");
 
-    //------------------------------------------
-    // Perspective
-    //------------------------------------------
+        let folha = null;
 
-    atualizarStatus("4 - Corrigindo perspectiva...");
+        if(typeof corrigirPerspectiva==="function"){
 
-    let folha;
+            folha = corrigirPerspectiva(
 
-    try{
+                src,
 
-        folha = corrigirPerspectiva(
+                resultado.marcadores
 
-            src,
+            );
 
-            resultado.marcadores
+            console.log("Perspective executado.");
+
+        }
+
+        //--------------------------------------
+        // Reader
+        //--------------------------------------
+
+        if(
+
+            folha &&
+
+            typeof lerQuestao1==="function"
+
+        ){
+
+            const resposta = lerQuestao1(folha);
+
+            console.log(
+
+                "Questão 1:",
+
+                resposta
+
+            );
+
+            atualizarStatus(
+
+                "Questão 1 = " + resposta
+
+            );
+
+            cv.imshow(
+
+                "canvas",
+
+                folha
+
+            );
+
+            folha.delete();
+
+        }
+
+        src.delete();
+
+    }
+
+    catch(erro){
+
+        console.error(erro);
+
+        atualizarStatus(
+
+            "Erro: " +
+
+            erro.message
 
         );
 
-    }catch(e){
-
-        console.error(e);
-
-        atualizarStatus("ERRO no perspective.js");
-
-        src.delete();
-
-        return;
-
     }
-
-    if(!folha){
-
-        atualizarStatus("Perspective retornou NULL.");
-
-        src.delete();
-
-        return;
-
-    }
-
-    atualizarStatus("5 - Perspectiva OK.");
-
-    //------------------------------------------
-    // Reader
-    //------------------------------------------
-
-    let resposta;
-
-    try{
-
-        resposta = lerQuestao1(folha);
-
-    }catch(e){
-
-        console.error(e);
-
-        atualizarStatus("ERRO no reader.js");
-
-        folha.delete();
-
-        src.delete();
-
-        return;
-
-    }
-
-    atualizarStatus(
-
-        "6 - Questão 1 = " + resposta
-
-    );
-
-    console.log(
-
-        "Questão 1:",
-
-        resposta
-
-    );
-
-    //------------------------------------------
-
-    cv.imshow(
-
-        "canvas",
-
-        folha
-
-    );
-
-    folha.delete();
-
-    src.delete();
 
 }

@@ -66,7 +66,7 @@ function capturarImagem(){
 
     video.style.display = "none";
 
-    canvas.style.display = "block";
+    canvas.style.display = "none";
 
     //------------------------------------------------------
     // Fecha câmera

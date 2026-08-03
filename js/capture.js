@@ -1,83 +1,135 @@
-/* ==================================================
-   AvaliaFácil v0.2
+/* ==========================================================
    capture.js
-================================================== */
+   AvaliaFácil
+========================================================== */
 
-/**
- * Captura um quadro do vídeo e transforma em imagem.
- */
-function capturarFoto() {
+//==========================================================
+// Captura a imagem da câmera
+//==========================================================
+
+function capturarImagem(){
+
+    atualizarStatus("Capturando imagem...");
 
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
     const foto = document.getElementById("foto");
 
-    const contexto = canvas.getContext("2d");
+    if(!video.srcObject){
 
-    // Ajusta o tamanho do canvas ao vídeo
+        atualizarStatus("A câmera não está ativa.");
+
+        return;
+
+    }
+
+    //------------------------------------------------------
+    // Ajusta o canvas
+    //------------------------------------------------------
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // Copia a imagem do vídeo
-    contexto.drawImage(
+    const ctx = canvas.getContext("2d");
+
+    ctx.drawImage(
+
         video,
+
         0,
+
         0,
+
         canvas.width,
+
         canvas.height
+
     );
 
+    //------------------------------------------------------
     // Converte para imagem
-    const imagem = canvas.toDataURL("image/jpeg", 0.95);
+    //------------------------------------------------------
 
-    foto.src = imagem;
+    foto.src = canvas.toDataURL("image/jpeg",0.95);
 
+    foto.onload = ()=>{
+
+        atualizarStatus("Foto capturada.");
+
+    };
+
+    //------------------------------------------------------
     // Exibe a foto
+    //------------------------------------------------------
+
     foto.style.display = "block";
 
-    // Esconde o vídeo
     video.style.display = "none";
 
-    // Exibe os botões corretos
-    document.getElementById("btnCapturar").style.display = "none";
-    document.getElementById("btnConfirmar").style.display = "inline-block";
-    document.getElementById("btnNova").style.display = "inline-block";
+    canvas.style.display = "block";
 
-    atualizarStatus("Foto capturada.");
+    //------------------------------------------------------
+    // Fecha câmera
+    //------------------------------------------------------
+
+    fecharCamera();
+
+    //------------------------------------------------------
+    // Botões
+    //------------------------------------------------------
+
+    document.getElementById(
+
+        "btnCapturar"
+
+    ).style.display="none";
+
+    document.getElementById(
+
+        "btnConfirmar"
+
+    ).style.display="inline-block";
+
+    document.getElementById(
+
+        "btnNova"
+
+    ).style.display="inline-block";
+
 }
 
-/**
- * Confirma a foto.
- * Nas próximas versões esta função fará
- * a leitura do gabarito.
- */
-function confirmarFoto() {
+//==========================================================
+// Reinicia a captura
+//==========================================================
 
-    document.getElementById("canvas").style.display = "block";
+function novaCaptura(){
 
-    document.getElementById("foto").style.display = "none";
+    const foto=document.getElementById("foto");
 
-    processarImagem();
+    const video=document.getElementById("video");
 
+    foto.style.display="none";
 
-}
+    video.style.display="block";
 
-/**
- * Descarta a foto e volta para a câmera.
- */
-function novaFoto() {
+    document.getElementById(
 
-    const video = document.getElementById("video");
-    const foto = document.getElementById("foto");
+        "btnCapturar"
 
-    foto.style.display = "none";
+    ).style.display="inline-block";
 
-    video.style.display = "block";
+    document.getElementById(
 
-    document.getElementById("btnCapturar").style.display = "inline-block";
-    document.getElementById("btnConfirmar").style.display = "none";
-    document.getElementById("btnNova").style.display = "none";
+        "btnConfirmar"
 
-    atualizarStatus("Pronto para uma nova captura.");
+    ).style.display="none";
+
+    document.getElementById(
+
+        "btnNova"
+
+    ).style.display="none";
+
+    abrirCamera();
 
 }

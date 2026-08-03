@@ -47,7 +47,7 @@ class Marcador{
 //==========================================================
 
 function detectarMarcadores(src){
-
+   atualizarStatus("DETECTOR NOVO");
     console.log("================================");
     console.log("DETECTOR");
     console.log("================================");

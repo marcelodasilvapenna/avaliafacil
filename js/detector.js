@@ -1,29 +1,27 @@
 /* ==========================================================
    detector.js
    AvaliaFácil
-   Detector de Marcadores v5.0
+   Detector de Marcadores v5.1
    ----------------------------------------------------------
    Detecta os quatro marcadores da folha de respostas.
-   Retorno:
-   {
-       encontrado : Boolean,
-       marcadores : Array<Marcador>,
-       score      : Number
-   }
 ========================================================== */
 
 const DetectorConfig = {
 
-    AREA_MINIMA: 400,
+    // Mais tolerante para imagens do celular
+    AREA_MINIMA: 150,
+
     AREA_MAXIMA: 50000,
 
-    PROPORCAO_MAXIMA: 1.25,
+    // Antes era 1.25
+    PROPORCAO_MAXIMA: 1.50,
 
     DISTANCIA_MINIMA: 40,
 
     MAX_CANDIDATOS: 80,
 
-    SCORE_MINIMO: 60
+    // Antes era 60
+    SCORE_MINIMO: 40
 
 };
 
@@ -51,6 +49,10 @@ class Marcador{
 
 function detectarMarcadores(src){
 
+    console.log("====================================");
+    console.log("INICIANDO DETECTOR");
+    console.log("====================================");
+
     // Pré-processa a imagem
     const binaria = preProcessar(src);
 
@@ -60,36 +62,31 @@ function detectarMarcadores(src){
     // A imagem binária não será mais utilizada
     binaria.delete();
 
+    console.log(
+        "Candidatos após pré-processamento:",
+        candidatos.length
+    );
+
     // Remove candidatos repetidos
     candidatos = removerDuplicados(candidatos);
+
+    console.log(
+        "Candidatos após remover duplicados:",
+        candidatos.length
+    );
 
     // Seleciona os quatro marcadores
     const marcadores = selecionarQuatroCantos(candidatos);
 
+    console.log(
+        "Marcadores selecionados:",
+        marcadores.length
+    );
+
     // Não encontrou quatro marcadores
     if(marcadores.length !== 4){
 
-        return {
-
-            encontrado:false,
-
-            marcadores:[],
-
-            score:0
-
-        };
-
-    }
-
-    // Ordena:
-    // 0 = Superior Esquerdo
-    // 1 = Superior Direito
-    // 2 = Inferior Direito
-    // 3 = Inferior Esquerdo
-    const ordenados = ordenarMarcadores(marcadores);
-
-    // Validação geométrica
-    if(!validarGeometria(ordenados)){
+        console.log("ERRO: menos de quatro marcadores.");
 
         return{
 
@@ -103,8 +100,51 @@ function detectarMarcadores(src){
 
     }
 
+    // Ordena os quatro marcadores
+    const ordenados = ordenarMarcadores(marcadores);
+
+    console.log("Marcadores ordenados.");
+
+    // Continua na Parte 2...
+    //======================================================
+    // Validação geométrica
+    //======================================================
+
+    if(!validarGeometria(ordenados)){
+
+        console.log("ERRO: validação geométrica reprovada.");
+
+        return{
+
+            encontrado:false,
+
+            marcadores:[],
+
+            score:0
+
+        };
+
+    }
+
+    console.log("Geometria aprovada.");
+
+    //======================================================
     // Calcula índice de confiança
+    //======================================================
+
     const score = calcularScore(ordenados);
+
+    console.log("--------------------------------");
+    console.log("Score:", score);
+    console.log(
+        "Score mínimo:",
+        DetectorConfig.SCORE_MINIMO
+    );
+    console.log(
+        "Detector encontrou:",
+        score >= DetectorConfig.SCORE_MINIMO
+    );
+    console.log("--------------------------------");
 
     return{
 
@@ -117,6 +157,7 @@ function detectarMarcadores(src){
     };
 
 }
+
 //==========================================================
 // Pré-processamento da imagem
 //==========================================================
@@ -137,7 +178,7 @@ function preProcessar(src){
 
     );
 
-    // Converte para tons de cinza
+    // Tons de cinza
     cv.cvtColor(
 
         src,
@@ -161,7 +202,7 @@ function preProcessar(src){
 
     );
 
-    // Binarização automática
+    // Binarização
     cv.threshold(
 
         blur,
@@ -172,11 +213,13 @@ function preProcessar(src){
 
         255,
 
-        cv.THRESH_BINARY_INV + cv.THRESH_OTSU
+        cv.THRESH_BINARY_INV +
+
+        cv.THRESH_OTSU
 
     );
 
-    // Fecha pequenos espaços nos marcadores
+    // Fecha pequenos espaços
     cv.morphologyEx(
 
         thresh,
@@ -198,13 +241,13 @@ function preProcessar(src){
     return thresh;
 
 }
+
 //==========================================================
 // Procura todos os quadrados candidatos
 //==========================================================
 
 function encontrarCandidatos(binaria){
-
-    let contours = new cv.MatVector();
+       let contours = new cv.MatVector();
 
     let hierarchy = new cv.Mat();
 
@@ -316,9 +359,13 @@ function encontrarCandidatos(binaria){
 
             Math.min(largura,altura);
 
-        if(proporcao >
+        if(
 
-            DetectorConfig.PROPORCAO_MAXIMA){
+            proporcao >
+
+            DetectorConfig.PROPORCAO_MAXIMA
+
+        ){
 
             aproximacao.delete();
 
@@ -334,13 +381,13 @@ function encontrarCandidatos(binaria){
 
             retangulo.x +
 
-            largura/2;
+            largura / 2;
 
         let cy =
 
             retangulo.y +
 
-            altura/2;
+            altura / 2;
 
         candidatos.push(
 
@@ -396,9 +443,35 @@ function encontrarCandidatos(binaria){
 
     }
 
+    //------------------------------------------------------
+    // Diagnóstico
+    //------------------------------------------------------
+
+    console.log("--------------------------------");
+    console.log("Detector - Candidatos encontrados:", candidatos.length);
+
+    candidatos.forEach((c,i)=>{
+
+        console.log(
+
+            "#" + (i+1),
+
+            "Área:", Math.round(c.area),
+
+            "Centro:",
+
+            "(" + Math.round(c.cx) + "," + Math.round(c.cy) + ")"
+
+        );
+
+    });
+
+    console.log("--------------------------------");
+
     return candidatos;
 
 }
+// começo da parte 4
 //==========================================================
 // Remove candidatos duplicados
 //==========================================================
@@ -484,6 +557,8 @@ function selecionarQuatroCantos(candidatos){
 
     if(candidatos.length < 4){
 
+        console.log("Menos de quatro candidatos.");
+
         return [];
 
     }
@@ -561,7 +636,14 @@ function selecionarQuatroCantos(candidatos){
 
     }
 
+    console.log(
+        "Marcadores únicos:",
+        unicos.length
+    );
+
     if(unicos.length !== 4){
+
+        console.log("Marcadores repetidos.");
 
         return [];
 
@@ -641,16 +723,15 @@ function validarGeometria(marcadores){
 
     if(marcadores.length !== 4){
 
+        console.log("Geometria: quantidade inválida.");
+
         return false;
 
     }
 
     const tl = marcadores[0];
-
     const tr = marcadores[1];
-
     const br = marcadores[2];
-
     const bl = marcadores[3];
 
     const larguraSuperior = distancia(tl,tr);
@@ -660,6 +741,13 @@ function validarGeometria(marcadores){
     const alturaEsquerda = distancia(tl,bl);
 
     const alturaDireita = distancia(tr,br);
+
+    console.log("-----------------------------");
+    console.log("VALIDAÇÃO GEOMÉTRICA");
+    console.log("Largura superior :", Math.round(larguraSuperior));
+    console.log("Largura inferior :", Math.round(larguraInferior));
+    console.log("Altura esquerda  :", Math.round(alturaEsquerda));
+    console.log("Altura direita   :", Math.round(alturaDireita));
 
     if(
 
@@ -672,6 +760,8 @@ function validarGeometria(marcadores){
         alturaDireita < 100
 
     ){
+
+        console.log("Geometria rejeitada: folha muito pequena.");
 
         return false;
 
@@ -713,13 +803,20 @@ function validarGeometria(marcadores){
 
         );
 
+    console.log("Erro horizontal:", erroHorizontal.toFixed(3));
+    console.log("Erro vertical  :", erroVertical.toFixed(3));
+
     if(erroHorizontal > 0.35){
+
+        console.log("Geometria rejeitada: erro horizontal.");
 
         return false;
 
     }
 
     if(erroVertical > 0.35){
+
+        console.log("Geometria rejeitada: erro vertical.");
 
         return false;
 
@@ -747,11 +844,18 @@ function validarGeometria(marcadores){
 
         );
 
+    console.log("Erro diagonal:", erroDiagonal.toFixed(3));
+
     if(erroDiagonal > 0.30){
+
+        console.log("Geometria rejeitada: diagonais.");
 
         return false;
 
     }
+
+    console.log("Geometria aprovada.");
+    console.log("-----------------------------");
 
     return true;
 
@@ -825,6 +929,10 @@ function calcularScore(marcadores){
 
         ) / mediaDiagonal;
 
+    //------------------------------------------------------
+    // Score
+    //------------------------------------------------------
+
     let score = 100;
 
     score -= erroHorizontal * 40;
@@ -847,6 +955,55 @@ function calcularScore(marcadores){
 
     );
 
-    return Math.round(score);
+    score = Math.round(score);
+
+    //------------------------------------------------------
+    // Diagnóstico
+    //------------------------------------------------------
+
+    console.log("==============================");
+    console.log("CÁLCULO DO SCORE");
+    console.log("==============================");
+
+    console.log(
+        "Erro Horizontal:",
+        erroHorizontal.toFixed(3)
+    );
+
+    console.log(
+        "Erro Vertical:",
+        erroVertical.toFixed(3)
+    );
+
+    console.log(
+        "Erro Diagonal:",
+        erroDiagonal.toFixed(3)
+    );
+
+    console.log(
+        "Score Final:",
+        score
+    );
+
+    console.log(
+        "Score mínimo:",
+        DetectorConfig.SCORE_MINIMO
+    );
+
+    if(score >= DetectorConfig.SCORE_MINIMO){
+
+        console.log("RESULTADO: FOLHA ENCONTRADA");
+
+    }else{
+
+        console.log("RESULTADO: FOLHA REJEITADA");
+
+    }
+
+    console.log("==============================");
+
+    return score;
 
 }
+
+

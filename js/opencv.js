@@ -1,31 +1,43 @@
-/* ===========================================
+/* ==========================================================
    opencv.js
-   AvaliaFácil v0.6.1
-=========================================== */
+   AvaliaFácil
+   Versão 1.0
+   Parte 1 de 2
+========================================================== */
 
 let opencvCarregado = false;
 
 //==========================================================
+// Inicialização do OpenCV
+//==========================================================
 
 function opencvPronto(){
 
-    cv.onRuntimeInitialized = () => {
+    cv.onRuntimeInitialized = ()=>{
 
         opencvCarregado = true;
 
         atualizarStatus("OpenCV carregado.");
 
-        console.log("OpenCV pronto.");
+        console.log("--------------------------------");
+        console.log("OpenCV carregado.");
+        console.log("--------------------------------");
 
     };
 
 }
 
 //==========================================================
+// Processamento principal
+//==========================================================
 
 function processarImagem(){
 
     try{
+
+        //--------------------------------------
+        // OpenCV carregado?
+        //--------------------------------------
 
         if(!opencvCarregado){
 
@@ -34,6 +46,10 @@ function processarImagem(){
             return;
 
         }
+
+        //--------------------------------------
+        // Componentes da página
+        //--------------------------------------
 
         const img = document.getElementById("foto");
         const canvas = document.getElementById("canvas");
@@ -46,38 +62,57 @@ function processarImagem(){
 
         }
 
-        atualizarStatus("Processando imagem...");
+        //--------------------------------------
+        // Lê imagem
+        //--------------------------------------
+
+        atualizarStatus("Lendo imagem...");
 
         let src = cv.imread(img);
+
+        console.log(
+
+            "Imagem:",
+
+            src.cols,
+
+            "x",
+
+            src.rows
+
+        );
 
         //--------------------------------------
         // Detector
         //--------------------------------------
 
+        atualizarStatus("Detectando marcadores...");
+
         let resultado = detectarMarcadores(src);
 
-console.log("================================");
-console.log("RETORNO DO DETECTOR");
-console.log(resultado);
-console.log("Encontrado:", resultado.encontrado);
-console.log("Marcadores:", resultado.marcadores.length);
-console.log("Score:", resultado.score);
-console.log("================================");
+        console.log("--------------------------------");
+        console.log("RETORNO DO DETECTOR");
+        console.log(resultado);
+        console.log("--------------------------------");
 
-atualizarStatus(
-    "E=" +
-    resultado.encontrado +
-    " M=" +
-    resultado.marcadores.length
-);
+        //--------------------------------------
+        // Não encontrou
+        //--------------------------------------
 
-if(!resultado.encontrado){
+        if(!resultado.encontrado){
+
             atualizarStatus("Folha não encontrada.");
 
             img.style.display = "none";
             canvas.style.display = "block";
 
-            cv.imshow("canvas",src);
+            cv.imshow(
+
+                "canvas",
+
+                src
+
+            );
 
             src.delete();
 
@@ -86,7 +121,13 @@ if(!resultado.encontrado){
         }
 
         //--------------------------------------
-        // Desenha os marcadores
+        // Encontrou
+        //--------------------------------------
+
+        atualizarStatus("Folha encontrada.");
+
+        //--------------------------------------
+        // Desenha marcadores
         //--------------------------------------
 
         resultado.marcadores.forEach(m=>{
@@ -95,11 +136,27 @@ if(!resultado.encontrado){
 
                 src,
 
-                new cv.Point(m.cx,m.cy),
+                new cv.Point(
+
+                    m.cx,
+
+                    m.cy
+
+                ),
 
                 12,
 
-                new cv.Scalar(255,0,0,255),
+                new cv.Scalar(
+
+                    255,
+
+                    0,
+
+                    0,
+
+                    255
+
+                ),
 
                 4
 
@@ -107,28 +164,33 @@ if(!resultado.encontrado){
 
         });
 
-        atualizarStatus("Folha encontrada.");
-
         //--------------------------------------
-        // Esconde a foto e mostra apenas o canvas
+        // Mostra imagem
         //--------------------------------------
 
         img.style.display = "none";
         canvas.style.display = "block";
 
-        //--------------------------------------
-        // Exibe imagem com marcadores
-        //--------------------------------------
+        cv.imshow(
 
-        cv.imshow("canvas",src);
+            "canvas",
+
+            src
+
+        );
 
         //--------------------------------------
+        // Continua na Parte 2
+        //--------------------------------------
+           //--------------------------------------
         // Perspective
         //--------------------------------------
 
         let folha = null;
 
-        if(typeof corrigirPerspectiva==="function"){
+        if(typeof corrigirPerspectiva === "function"){
+
+            atualizarStatus("Corrigindo perspectiva...");
 
             folha = corrigirPerspectiva(
 
@@ -137,6 +199,24 @@ if(!resultado.encontrado){
                 resultado.marcadores
 
             );
+
+            if(folha){
+
+                console.log("Perspective OK.");
+
+                cv.imshow(
+
+                    "canvas",
+
+                    folha
+
+                );
+
+            }else{
+
+                console.log("Perspective retornou NULL.");
+
+            }
 
         }
 
@@ -148,25 +228,59 @@ if(!resultado.encontrado){
 
             folha &&
 
-            typeof lerQuestao1==="function"
+            typeof lerQuestao1 === "function"
 
         ){
 
-            const resposta = lerQuestao1(folha);
+            atualizarStatus("Lendo questão 1...");
 
-            atualizarStatus(
+            const resposta = lerQuestao1(
 
-                "Questão 1 = " + resposta
+                folha
 
             );
 
-            cv.imshow("canvas",folha);
+            console.log(
+
+                "Questão 1:",
+
+                resposta
+
+            );
+
+            atualizarStatus(
+
+                "Questão 1 = " +
+
+                resposta
+
+            );
+
+            cv.imshow(
+
+                "canvas",
+
+                folha
+
+            );
+
+        }
+
+        //--------------------------------------
+        // Libera memória
+        //--------------------------------------
+
+        if(folha){
 
             folha.delete();
 
         }
 
         src.delete();
+
+        console.log("--------------------------------");
+        console.log("Processamento finalizado.");
+        console.log("--------------------------------");
 
     }
 
@@ -176,10 +290,16 @@ if(!resultado.encontrado){
 
         atualizarStatus(
 
-            "Erro: " + erro.message
+            "Erro: " +
+
+            erro.message
 
         );
 
     }
 
 }
+
+/* ==========================================================
+   FIM DO ARQUIVO
+========================================================== */

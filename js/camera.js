@@ -1,99 +1,97 @@
-/* ==================================================
-   AvaliaFácil v0.2
+/* ==========================================================
    camera.js
-================================================== */
+   AvaliaFácil
+   Controle da câmera
+========================================================== */
 
-let stream = null;
+let streamCamera = null;
 
-/**
- * Atualiza a mensagem de status.
- */
-function atualizarStatus(texto) {
+//==========================================================
+// Atualiza mensagem na tela
+//==========================================================
+
+function atualizarStatus(texto){
+
     const mensagem = document.getElementById("mensagem");
-    if (mensagem) {
+
+    if(mensagem){
+
         mensagem.textContent = texto;
+
     }
+
+    console.log(texto);
+
 }
 
-/**
- * Abre a câmera do dispositivo.
- */
-async function abrirCamera() {
+//==========================================================
+// Abre a câmera
+//==========================================================
 
-    const video = document.getElementById("video");
+async function abrirCamera(){
 
-    try {
+    try{
 
         atualizarStatus("Solicitando acesso à câmera...");
 
-        stream = await navigator.mediaDevices.getUserMedia({
+        const video = document.getElementById("video");
 
-            video: {
-                facingMode: {
-                    ideal: "environment"
-                },
-                width: {
-                    ideal: 1920
-                },
-                height: {
-                    ideal: 1080
-                }
+        streamCamera = await navigator.mediaDevices.getUserMedia({
+
+            video:{
+
+                facingMode:"environment",
+
+                width:{ideal:1920},
+
+                height:{ideal:1080}
+
             },
 
-            audio: false
+            audio:false
 
         });
 
-        video.srcObject = stream;
+        video.srcObject = streamCamera;
 
-        video.onloadedmetadata = () => {
+        await video.play();
 
-            video.play();
+        document.getElementById("btnCapturar").disabled = false;
 
-            atualizarStatus("Câmera pronta.");
-
-            document.getElementById("btnCapturar").disabled = false;
-
-        };
+        atualizarStatus("Câmera pronta.");
 
     }
-    catch (erro) {
+
+    catch(erro){
 
         console.error(erro);
 
         atualizarStatus("Não foi possível acessar a câmera.");
 
-        alert(
-            "Erro ao acessar a câmera.\n\n" +
-            "Verifique se o navegador possui permissão."
-        );
-
     }
 
 }
 
-/**
- * Fecha a câmera.
- */
-function fecharCamera() {
+//==========================================================
+// Fecha a câmera
+//==========================================================
 
-    if (!stream) return;
+function fecharCamera(){
 
-    stream.getTracks().forEach(track => track.stop());
+    if(!streamCamera){
 
-    stream = null;
+        return;
 
-    atualizarStatus("Câmera desligada.");
+    }
 
-}
+    streamCamera.getTracks().forEach(track=>{
 
-/**
- * Reinicia a câmera.
- */
-async function reiniciarCamera() {
+        track.stop();
 
-    fecharCamera();
+    });
 
-    await abrirCamera();
+    streamCamera = null;
+
+    atualizarStatus("Câmera encerrada.");
 
 }

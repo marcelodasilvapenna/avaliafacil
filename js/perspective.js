@@ -1,35 +1,37 @@
 /* ==========================================================
    perspective.js
    AvaliaFácil
-   Correção de Perspectiva v2.0
+   Correção de Perspectiva v3.0
+   Parte 1 de 3
 ========================================================== */
 
 //==========================================================
-// Configuração da folha corrigida
+// Configuração
 //==========================================================
 
-const PerspectiveConfig = {
+const PerspectiveConfig={
 
-    // A4 em alta resolução
-    LARGURA: 1654,
+    // Tamanho da folha A4
 
-    ALTURA: 2339
+    LARGURA:1654,
+
+    ALTURA:2339
 
 };
 
 //==========================================================
-// Corrige a perspectiva da folha
+// Corrige a perspectiva
 //==========================================================
 
-function corrigirPerspectiva(src, marcadores){
+function corrigirPerspectiva(src,marcadores){
 
     console.log("================================");
-    console.log("CORREÇÃO DE PERSPECTIVA");
+    console.log("PERSPECTIVE");
     console.log("================================");
 
-    //------------------------------------------------------
-    // Validação
-    //------------------------------------------------------
+    //--------------------------------------
+    // Imagem válida
+    //--------------------------------------
 
     if(!src){
 
@@ -39,6 +41,10 @@ function corrigirPerspectiva(src, marcadores){
 
     }
 
+    //--------------------------------------
+    // Marcadores
+    //--------------------------------------
+
     if(!marcadores){
 
         console.log("Marcadores inexistentes.");
@@ -47,11 +53,11 @@ function corrigirPerspectiva(src, marcadores){
 
     }
 
-    if(marcadores.length !== 4){
+    if(marcadores.length!==4){
 
         console.log(
 
-            "Quantidade incorreta de marcadores:",
+            "Quantidade incorreta:",
 
             marcadores.length
 
@@ -61,33 +67,42 @@ function corrigirPerspectiva(src, marcadores){
 
     }
 
-    console.log(
+    atualizarStatus(
 
-        "Quatro marcadores confirmados."
-
-    );
-
-    //------------------------------------------------------
-    // Ordena os marcadores
-    //------------------------------------------------------
-
-    const pontos = ordenarMarcadores(
-
-        marcadores
+        "Corrigindo perspectiva..."
 
     );
 
-    console.log(
+    //--------------------------------------
+    // O detector já entrega
+    // os marcadores ordenados.
+    //--------------------------------------
 
-        "Marcadores ordenados."
+    const pontos = marcadores;
 
-    );
+    //--------------------------------------
+    // Diagnóstico
+    //--------------------------------------
 
-    //------------------------------------------------------
-    // Continua na Parte 2...
-      //------------------------------------------------------
+    console.log("Marcadores:");
+
+    pontos.forEach((p,i)=>{
+
+        console.log(
+
+            i,
+
+            p.cx,
+
+            p.cy
+
+        );
+
+    });
+
+    //--------------------------------------
     // Pontos de origem
-    //------------------------------------------------------
+    //--------------------------------------
 
     const srcTri = cv.matFromArray(
 
@@ -115,9 +130,19 @@ function corrigirPerspectiva(src, marcadores){
 
     );
 
-    //------------------------------------------------------
+    //--------------------------------------
+    // Continua na Parte 2
+    //--------------------------------------
+/* ==========================================================
+   perspective.js
+   AvaliaFácil
+   Correção de Perspectiva v3.0
+   Parte 2 de 3
+========================================================== */
+
+    //--------------------------------------
     // Pontos de destino
-    //------------------------------------------------------
+    //--------------------------------------
 
     const dstTri = cv.matFromArray(
 
@@ -145,12 +170,11 @@ function corrigirPerspectiva(src, marcadores){
 
     );
 
-    console.log("Pontos de origem criados.");
     console.log("Pontos de destino criados.");
 
-    //------------------------------------------------------
-    // Matriz de transformação
-    //------------------------------------------------------
+    //--------------------------------------
+    // Matriz
+    //--------------------------------------
 
     const matriz = cv.getPerspectiveTransform(
 
@@ -160,13 +184,33 @@ function corrigirPerspectiva(src, marcadores){
 
     );
 
-    console.log("Matriz calculada.");
+    if(!matriz){
 
-    //------------------------------------------------------
-    // Imagem de saída
-    //------------------------------------------------------
+        console.log("Erro ao criar matriz.");
+
+        atualizarStatus(
+
+            "Erro na matriz."
+
+        );
+
+        srcTri.delete();
+
+        dstTri.delete();
+
+        return null;
+
+    }
+
+    console.log("Matriz criada.");
+
+    //--------------------------------------
+    // Imagem corrigida
+    //--------------------------------------
 
     const folha = new cv.Mat();
+
+    console.log("Executando warpPerspective...");
 
     cv.warpPerspective(
 
@@ -202,13 +246,73 @@ function corrigirPerspectiva(src, marcadores){
 
     );
 
-    console.log("Perspectiva corrigida.");
+    //--------------------------------------
+    // Diagnóstico
+    //--------------------------------------
 
-    //------------------------------------------------------
-    // Continua na Parte 3...
-      //------------------------------------------------------
+    console.log(
+
+        "Folha criada:",
+
+        folha.cols,
+
+        "x",
+
+        folha.rows
+
+    );
+
+    if(
+
+        folha.cols===0 ||
+
+        folha.rows===0
+
+    ){
+
+        console.log(
+
+            "Folha inválida."
+
+        );
+
+        atualizarStatus(
+
+            "Erro na perspectiva."
+
+        );
+
+        srcTri.delete();
+
+        dstTri.delete();
+
+        matriz.delete();
+
+        folha.delete();
+
+        return null;
+
+    }
+
+    console.log(
+
+        "Perspective OK."
+
+    );
+
+    //--------------------------------------
+    // Continua na Parte 3
+    //--------------------------------------
+   /* ==========================================================
+   perspective.js
+   AvaliaFácil
+   Correção de Perspectiva v3.0
+   Parte 3 de 3
+========================================================== */
+
+    //--------------------------------------
     // Libera memória
-    //------------------------------------------------------
+    //--------------------------------------
 
     srcTri.delete();
 
@@ -218,9 +322,9 @@ function corrigirPerspectiva(src, marcadores){
 
     console.log("Memória liberada.");
 
-    //------------------------------------------------------
+    //--------------------------------------
     // Exibe a folha corrigida
-    //------------------------------------------------------
+    //--------------------------------------
 
     const canvas = document.getElementById("canvas");
 
@@ -236,11 +340,19 @@ function corrigirPerspectiva(src, marcadores){
 
     }
 
-    console.log("Folha exibida.");
+    atualizarStatus(
 
-    //------------------------------------------------------
+        "Perspectiva concluída."
+
+    );
+
+    //--------------------------------------
     // Diagnóstico
-    //------------------------------------------------------
+    //--------------------------------------
+
+    console.log("--------------------------------");
+    console.log("FOLHA CORRIGIDA");
+    console.log("--------------------------------");
 
     console.log(
 
@@ -258,87 +370,31 @@ function corrigirPerspectiva(src, marcadores){
 
     );
 
-    console.log("================================");
+    console.log("--------------------------------");
     console.log("PERSPECTIVA CONCLUÍDA");
-    console.log("================================");
+    console.log("--------------------------------");
 
-    //------------------------------------------------------
-    // Retorna a folha corrigida
-    //------------------------------------------------------
+    //--------------------------------------
+    // Retorno
+    //--------------------------------------
 
     return folha;
 
 }
-//==========================================================
-// Cria um ponto OpenCV
-//==========================================================
-
-function criarPonto(x,y){
-
-    return new cv.Point(
-
-        x,
-
-        y
-
-    );
-
-}
 
 //==========================================================
-// Exibe os marcadores para depuração
-//==========================================================
-
-function mostrarMarcadores(marcadores){
-
-    console.log("----------------------------");
-    console.log("MARCADORES");
-
-    marcadores.forEach((m,i)=>{
-
-        console.log(
-
-            i,
-
-            "x:",
-
-            Math.round(m.cx),
-
-            "y:",
-
-            Math.round(m.cy)
-
-        );
-
-    });
-
-    console.log("----------------------------");
-
-}
-
-//==========================================================
-// Verifica se os quatro marcadores existem
+// Verifica os marcadores
 //==========================================================
 
 function validarMarcadores(marcadores){
 
     if(!Array.isArray(marcadores)){
 
-        console.log("Marcadores inválidos.");
-
         return false;
 
     }
 
     if(marcadores.length!==4){
-
-        console.log(
-
-            "Quantidade incorreta:",
-
-            marcadores.length
-
-        );
 
         return false;
 
@@ -353,12 +409,6 @@ function validarMarcadores(marcadores){
             marcador.cy===undefined
 
         ){
-
-            console.log(
-
-                "Marcador incompleto."
-
-            );
 
             return false;
 
@@ -376,9 +426,11 @@ function validarMarcadores(marcadores){
 
 function informarFolha(folha){
 
-    console.log("----------------------------");
-    console.log("FOLHA CORRIGIDA");
-    console.log("----------------------------");
+    console.log("--------------------------------");
+
+    console.log("FOLHA");
+
+    console.log("--------------------------------");
 
     console.log(
 
@@ -396,8 +448,10 @@ function informarFolha(folha){
 
     );
 
-    console.log("----------------------------");
+    console.log("--------------------------------");
 
 }
-//fim do perspective
 
+/* ==========================================================
+   FIM DO ARQUIVO
+========================================================== */

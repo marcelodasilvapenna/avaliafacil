@@ -1,6 +1,6 @@
 /* ===========================================
    opencv.js
-   AvaliaFácil v0.6
+   AvaliaFácil v0.6.1
 =========================================== */
 
 let opencvCarregado = false;
@@ -27,10 +27,6 @@ function processarImagem(){
 
     try{
 
-        //--------------------------------------
-        // OpenCV
-        //--------------------------------------
-
         if(!opencvCarregado){
 
             atualizarStatus("OpenCV não carregado.");
@@ -39,11 +35,8 @@ function processarImagem(){
 
         }
 
-        //--------------------------------------
-        // Foto
-        //--------------------------------------
-
         const img = document.getElementById("foto");
+        const canvas = document.getElementById("canvas");
 
         if(!img){
 
@@ -54,10 +47,6 @@ function processarImagem(){
         }
 
         atualizarStatus("Processando imagem...");
-
-        //--------------------------------------
-        // Lê imagem
-        //--------------------------------------
 
         let src = cv.imread(img);
 
@@ -71,6 +60,9 @@ function processarImagem(){
 
             atualizarStatus("Folha não encontrada.");
 
+            img.style.display = "none";
+            canvas.style.display = "block";
+
             cv.imshow("canvas",src);
 
             src.delete();
@@ -80,7 +72,7 @@ function processarImagem(){
         }
 
         //--------------------------------------
-        // Desenha marcadores
+        // Desenha os marcadores
         //--------------------------------------
 
         resultado.marcadores.forEach(m=>{
@@ -89,27 +81,11 @@ function processarImagem(){
 
                 src,
 
-                new cv.Point(
-
-                    m.cx,
-
-                    m.cy
-
-                ),
+                new cv.Point(m.cx,m.cy),
 
                 12,
 
-                new cv.Scalar(
-
-                    255,
-
-                    0,
-
-                    0,
-
-                    255
-
-                ),
+                new cv.Scalar(255,0,0,255),
 
                 4
 
@@ -120,22 +96,21 @@ function processarImagem(){
         atualizarStatus("Folha encontrada.");
 
         //--------------------------------------
-        // Mostra imagem original
+        // Esconde a foto e mostra apenas o canvas
         //--------------------------------------
 
-        cv.imshow(
+        img.style.display = "none";
+        canvas.style.display = "block";
 
-            "canvas",
+        //--------------------------------------
+        // Exibe imagem com marcadores
+        //--------------------------------------
 
-            src
-
-        );
+        cv.imshow("canvas",src);
 
         //--------------------------------------
         // Perspective
         //--------------------------------------
-
-        console.log("Iniciando perspective...");
 
         let folha = null;
 
@@ -148,8 +123,6 @@ function processarImagem(){
                 resultado.marcadores
 
             );
-
-            console.log("Perspective executado.");
 
         }
 
@@ -167,27 +140,13 @@ function processarImagem(){
 
             const resposta = lerQuestao1(folha);
 
-            console.log(
-
-                "Questão 1:",
-
-                resposta
-
-            );
-
             atualizarStatus(
 
                 "Questão 1 = " + resposta
 
             );
 
-            cv.imshow(
-
-                "canvas",
-
-                folha
-
-            );
+            cv.imshow("canvas",folha);
 
             folha.delete();
 
@@ -203,9 +162,7 @@ function processarImagem(){
 
         atualizarStatus(
 
-            "Erro: " +
-
-            erro.message
+            "Erro: " + erro.message
 
         );
 

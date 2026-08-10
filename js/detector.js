@@ -355,6 +355,58 @@ function encontrarCandidatos(binaria){
     let candidatos = [];
 
     //------------------------------------------------------
+    // Diagnóstico
+    //------------------------------------------------------
+
+    let rejeitadosArea = 0;
+
+    let rejeitadosForma = 0;
+
+    let rejeitadosTamanho = 0;
+
+    let rejeitadosProporcao = 0;
+
+    //------------------------------------------------------
+    // Tamanho da imagem
+    //------------------------------------------------------
+
+    const imagemArea =
+
+        binaria.cols *
+
+        binaria.rows;
+
+    //------------------------------------------------------
+    // Limites de área
+    //
+    // Mantemos os valores do DetectorConfig,
+    // mas permitimos uma margem maior para fotos
+    // em diferentes distâncias.
+    //------------------------------------------------------
+
+    const areaMinima = Math.max(
+
+        20,
+
+        Math.min(
+
+            DetectorConfig.AREA_MINIMA,
+
+            imagemArea * 0.000001
+
+        )
+
+    );
+
+    const areaMaxima = Math.max(
+
+        DetectorConfig.AREA_MAXIMA,
+
+        imagemArea * 0.05
+
+    );
+
+    //------------------------------------------------------
     // Analisa cada contorno encontrado
     //------------------------------------------------------
 
@@ -370,11 +422,35 @@ function encontrarCandidatos(binaria){
 
         if(
 
-            area < DetectorConfig.AREA_MINIMA ||
+            area < areaMinima ||
 
-            area > DetectorConfig.AREA_MAXIMA
+            area > areaMaxima
 
         ){
+
+            rejeitadosArea++;
+
+            contorno.delete();
+
+            continue;
+
+        }
+
+        //----------------------------------
+        // Perímetro
+        //----------------------------------
+
+        let perimetro = cv.arcLength(
+
+            contorno,
+
+            true
+
+        );
+
+        if(perimetro <= 0){
+
+            rejeitadosForma++;
 
             contorno.delete();
 
@@ -386,14 +462,6 @@ function encontrarCandidatos(binaria){
         // Aproxima polígono
         //----------------------------------
 
-        let perimetro = cv.arcLength(
-
-            contorno,
-
-            true
-
-        );
-
         let aprox = new cv.Mat();
 
         cv.approxPolyDP(
@@ -402,17 +470,19 @@ function encontrarCandidatos(binaria){
 
             aprox,
 
-            0.02 * perimetro,
+            0.025 * perimetro,
 
             true
 
         );
 
         //----------------------------------
-        // Apenas quadriláteros
+        // Aceitamos somente quadriláteros
         //----------------------------------
 
-        if(aprox.rows != 4){
+        if(aprox.rows !== 4){
+
+            rejeitadosForma++;
 
             aprox.delete();
 
@@ -427,6 +497,8 @@ function encontrarCandidatos(binaria){
         //----------------------------------
 
         if(!cv.isContourConvex(aprox)){
+
+            rejeitadosForma++;
 
             aprox.delete();
 
@@ -451,16 +523,21 @@ function encontrarCandidatos(binaria){
         let altura = rect.height;
 
         //----------------------------------
-        // Muito pequeno
+        // Tamanho mínimo
+        //
+        // Reduzimos o mínimo para permitir
+        // marcadores fotografados de longe.
         //----------------------------------
 
         if(
 
-            largura < 8 ||
+            largura < 6 ||
 
-            altura < 8
+            altura < 6
 
         ){
+
+            rejeitadosTamanho++;
 
             aprox.delete();
 
@@ -492,13 +569,62 @@ function encontrarCandidatos(binaria){
 
             );
 
+        //----------------------------------
+        // Tolerância maior para perspectiva
+        //----------------------------------
+
+        const proporcaoMaxima = Math.max(
+
+            DetectorConfig.PROPORCAO_MAXIMA,
+
+            2.5
+
+        );
+
         if(
 
             proporcao >
 
-            DetectorConfig.PROPORCAO_MAXIMA
+            proporcaoMaxima
 
         ){
+
+            rejeitadosProporcao++;
+
+            aprox.delete();
+
+            contorno.delete();
+
+            continue;
+
+        }
+
+        //----------------------------------
+        // Ocupação do retângulo
+        //
+        // Um marcador sólido deve ocupar boa
+        // parte do seu bounding box.
+        //----------------------------------
+
+        const areaRetangulo =
+
+            largura *
+
+            altura;
+
+        const ocupacao =
+
+            area /
+
+            areaRetangulo;
+
+        if(
+
+            ocupacao < 0.35
+
+        ){
+
+            rejeitadosForma++;
 
             aprox.delete();
 
@@ -516,13 +642,13 @@ function encontrarCandidatos(binaria){
 
             rect.x +
 
-            largura/2;
+            largura / 2;
 
         let cy =
 
-            rect.y + 
+            rect.y +
 
-            altura/2;
+            altura / 2;
 
         //----------------------------------
         // Salva candidato
@@ -546,11 +672,19 @@ function encontrarCandidatos(binaria){
 
         );
 
+        //----------------------------------
+        // Libera memória
+        //----------------------------------
+
         aprox.delete();
 
         contorno.delete();
 
     }
+
+    //------------------------------------------------------
+    // Libera OpenCV
+    //------------------------------------------------------
 
     hierarchy.delete();
 
@@ -589,8 +723,48 @@ function encontrarCandidatos(binaria){
     }
 
     //------------------------------------------------------
-    // Diagnóstico
+    // Diagnóstico detalhado
     //------------------------------------------------------
+
+    console.log(
+
+        "Contornos analisados:",
+
+        contours.size
+
+    );
+
+    console.log(
+
+        "Rejeitados por área:",
+
+        rejeitadosArea
+
+    );
+
+    console.log(
+
+        "Rejeitados por forma:",
+
+        rejeitadosForma
+
+    );
+
+    console.log(
+
+        "Rejeitados por tamanho:",
+
+        rejeitadosTamanho
+
+    );
+
+    console.log(
+
+        "Rejeitados por proporção:",
+
+        rejeitadosProporcao
+
+    );
 
     console.log(
 
@@ -600,9 +774,17 @@ function encontrarCandidatos(binaria){
 
     );
 
+    //------------------------------------------------------
+    // Retorno
+    //------------------------------------------------------
+
     return candidatos;
 
 }
+
+/* ==========================================================
+   FIM DA FUNÇÃO encontrarCandidatos()
+========================================================== */
 
 /* ==========================================================
    FIM DA PARTE 3

@@ -1,11 +1,11 @@
 /* ==========================================================
    opencv.js
    AvaliaFácil
-   Versão 1.0
-   Parte 1 de 2
+   Versão 1.1
 ========================================================== */
 
 let opencvCarregado = false;
+
 
 //==========================================================
 // Inicialização do OpenCV
@@ -17,7 +17,9 @@ function opencvPronto(){
 
         opencvCarregado = true;
 
-        atualizarStatus("OpenCV carregado.");
+        atualizarStatus(
+            "OpenCV carregado."
+        );
 
         console.log("--------------------------------");
         console.log("OpenCV carregado.");
@@ -27,11 +29,18 @@ function opencvPronto(){
 
 }
 
+
 //==========================================================
 // Processamento principal
 //==========================================================
 
 function processarImagem(){
+
+    let src = null;
+
+    let imagemDiagnostico = null;
+
+    let folha = null;
 
     try{
 
@@ -41,121 +50,185 @@ function processarImagem(){
 
         if(!opencvCarregado){
 
-            atualizarStatus("OpenCV não carregado.");
+            atualizarStatus(
+                "OpenCV não carregado."
+            );
 
             return;
 
         }
+
 
         //--------------------------------------
         // Componentes da página
         //--------------------------------------
 
-        const img = document.getElementById("foto");
-        const canvas = document.getElementById("canvas");
+        const img =
+            document.getElementById("foto");
+
+        const canvas =
+            document.getElementById("canvas");
+
 
         if(!img){
 
-            atualizarStatus("Imagem não encontrada.");
+            atualizarStatus(
+                "Imagem não encontrada."
+            );
 
             return;
 
         }
 
+
+        if(!canvas){
+
+            atualizarStatus(
+                "Canvas não encontrado."
+            );
+
+            return;
+
+        }
+
+
         //--------------------------------------
-        // Lê imagem
+        // Lê imagem original
         //--------------------------------------
 
-        atualizarStatus("Lendo imagem...");
-
-        let src = cv.imread(img);
-
-        console.log(
-
-            "Imagem:",
-
-            src.cols,
-
-            "x",
-
-            src.rows
-
+        atualizarStatus(
+            "Lendo imagem..."
         );
+
+        src = cv.imread(img);
+
+
+        console.log("--------------------------------");
+        console.log("IMAGEM ORIGINAL");
+        console.log(
+            "Largura:",
+            src.cols
+        );
+        console.log(
+            "Altura:",
+            src.rows
+        );
+        console.log("--------------------------------");
+
 
         //--------------------------------------
         // Detector
         //--------------------------------------
 
-        atualizarStatus("Detectando marcadores...");
+        atualizarStatus(
+            "Detectando marcadores..."
+        );
 
-        let resultado = detectarMarcadores(src);
+
+        const resultado =
+            detectarMarcadores(src);
+
 
         console.log("--------------------------------");
         console.log("RETORNO DO DETECTOR");
         console.log(resultado);
+        console.log(
+            "Encontrado:",
+            resultado.encontrado
+        );
+        console.log(
+            "Marcadores:",
+            resultado.marcadores.length
+        );
+        console.log(
+            "Score:",
+            resultado.score
+        );
         console.log("--------------------------------");
 
+
         //--------------------------------------
-        // Não encontrou
+        // Folha não encontrada
         //--------------------------------------
 
         if(!resultado.encontrado){
 
-            atualizarStatus("Folha não encontrada.");
-
-            img.style.display = "none";
-            canvas.style.display = "block";
-
-            cv.imshow(
-
-                "canvas",
-
-                src
-
+            atualizarStatus(
+                "Folha não encontrada."
             );
 
+
+            img.style.display =
+                "none";
+
+            canvas.style.display =
+                "block";
+
+
+            cv.imshow(
+                "canvas",
+                src
+            );
+
+
             src.delete();
+
+            src = null;
 
             return;
 
         }
 
+
         //--------------------------------------
-        // Encontrou
+        // Folha encontrada
         //--------------------------------------
 
-        atualizarStatus("Folha encontrada.");
+        atualizarStatus(
+            "Folha encontrada."
+        );
+
+
+        //--------------------------------------
+        // Cria imagem apenas para diagnóstico
+        //--------------------------------------
+        //
+        // IMPORTANTE:
+        //
+        // Não vamos desenhar os marcadores
+        // diretamente em src.
+        //
+        // A perspectiva precisa receber
+        // a imagem original.
+        //--------------------------------------
+
+        imagemDiagnostico =
+            src.clone();
+
 
         //--------------------------------------
         // Desenha marcadores
+        // somente na imagem de diagnóstico
         //--------------------------------------
 
         resultado.marcadores.forEach(m=>{
 
             cv.circle(
 
-                src,
+                imagemDiagnostico,
 
                 new cv.Point(
-
                     m.cx,
-
                     m.cy
-
                 ),
 
                 12,
 
                 new cv.Scalar(
-
                     255,
-
                     0,
-
                     0,
-
                     255
-
                 ),
 
                 4
@@ -164,35 +237,97 @@ function processarImagem(){
 
         });
 
+
         //--------------------------------------
-        // Mostra imagem
+        // Mostra imagem com marcadores
         //--------------------------------------
 
-        img.style.display = "none";
-        canvas.style.display = "block";
+        img.style.display =
+            "none";
+
+        canvas.style.display =
+            "block";
+
 
         cv.imshow(
-
             "canvas",
-
-            src
-
+            imagemDiagnostico
         );
 
+
+        atualizarStatus(
+            "Marcadores encontrados."
+        );
+
+
+        console.log("--------------------------------");
+        console.log(
+            "4 MARCADORES DETECTADOS"
+        );
+        console.log("--------------------------------");
+
+
         //--------------------------------------
-        // Continua na Parte 2
+        // Libera imagem de diagnóstico
         //--------------------------------------
-           //--------------------------------------
+
+        imagemDiagnostico.delete();
+
+        imagemDiagnostico = null;
+
+
+        //--------------------------------------
         // Perspective
         //--------------------------------------
 
-        let folha = null;
+        if(
+            typeof corrigirPerspectiva !==
+            "function"
+        ){
 
-        if(typeof corrigirPerspectiva === "function"){
+            atualizarStatus(
+                "Perspective não encontrado."
+            );
 
-            atualizarStatus("Corrigindo perspectiva...");
+            console.error(
+                "A função corrigirPerspectiva() não existe."
+            );
 
-            folha = corrigirPerspectiva(
+            src.delete();
+
+            src = null;
+
+            return;
+
+        }
+
+
+        //--------------------------------------
+        // Inicia perspectiva
+        //--------------------------------------
+
+        atualizarStatus(
+            "Corrigindo perspectiva..."
+        );
+
+
+        console.log("--------------------------------");
+        console.log(
+            "INICIANDO PERSPECTIVE"
+        );
+        console.log("--------------------------------");
+
+
+        //--------------------------------------
+        // IMPORTANTE:
+        //
+        // Enviamos src ORIGINAL.
+        //
+        // Não enviamos imagemDiagnostico.
+        //--------------------------------------
+
+        folha =
+            corrigirPerspectiva(
 
                 src,
 
@@ -200,93 +335,198 @@ function processarImagem(){
 
             );
 
-            if(folha){
 
-                console.log("Perspective OK.");
+        //--------------------------------------
+        // Verifica retorno
+        //--------------------------------------
 
-                cv.imshow(
+        if(!folha){
 
-                    "canvas",
+            console.error(
+                "Perspective retornou NULL."
+            );
 
-                    folha
+            atualizarStatus(
+                "Erro na perspectiva."
+            );
 
-                );
+            src.delete();
 
-            }else{
+            src = null;
 
-                console.log("Perspective retornou NULL.");
-
-            }
+            return;
 
         }
 
+
         //--------------------------------------
-        // Reader
+        // Diagnóstico da folha
+        //--------------------------------------
+
+        console.log("--------------------------------");
+        console.log(
+            "FOLHA CORRIGIDA RECEBIDA"
+        );
+        console.log(
+            "Largura:",
+            folha.cols
+        );
+        console.log(
+            "Altura:",
+            folha.rows
+        );
+        console.log("--------------------------------");
+
+
+        //--------------------------------------
+        // Verifica se a folha possui tamanho
         //--------------------------------------
 
         if(
 
-            folha &&
+            folha.cols <= 0 ||
 
-            typeof lerQuestao1 === "function"
+            folha.rows <= 0
 
         ){
 
-            atualizarStatus("Lendo questão 1...");
-
-            const resposta = lerQuestao1(
-
-                folha
-
-            );
-
-            console.log(
-
-                "Questão 1:",
-
-                resposta
-
+            console.error(
+                "Folha retornada está vazia."
             );
 
             atualizarStatus(
-
-                "Questão 1 = " +
-
-                resposta
-
+                "Folha corrigida inválida."
             );
-
-            cv.imshow(
-
-                "canvas",
-
-                folha
-
-            );
-
-        }
-
-        //--------------------------------------
-        // Libera memória
-        //--------------------------------------
-
-        if(folha){
 
             folha.delete();
 
+            folha = null;
+
+            src.delete();
+
+            src = null;
+
+            return;
+
         }
+
+
+        //--------------------------------------
+        // MOSTRA A FOLHA CORRIGIDA
+        //--------------------------------------
+        //
+        // Este é o ponto mais importante.
+        //
+        // Depois daqui, não mostramos mais
+        // src.
+        //--------------------------------------
+
+        cv.imshow(
+            "canvas",
+            folha
+        );
+
+
+        //--------------------------------------
+        // Perspectiva concluída
+        //--------------------------------------
+
+        atualizarStatus(
+            "Perspectiva concluída."
+        );
+
+
+        console.log("--------------------------------");
+        console.log(
+            "PERSPECTIVA CONCLUÍDA"
+        );
+        console.log("--------------------------------");
+
+
+        //--------------------------------------
+        // Reader
+        //--------------------------------------
+        //
+        // NÃO vamos executar o reader ainda.
+        //
+        // O readers.js ainda será desenvolvido.
+        //--------------------------------------
+
+        console.log(
+            "Reader ainda não implementado."
+        );
+
+
+        //--------------------------------------
+        // Libera imagem original
+        //--------------------------------------
 
         src.delete();
 
+        src = null;
+
+
+        //--------------------------------------
+        // NÃO liberamos folha aqui.
+        //
+        // Ela continua sendo usada pelo canvas.
+        //
+        // Será liberada na próxima etapa,
+        // quando começarmos o readers.js.
+        //--------------------------------------
+
         console.log("--------------------------------");
-        console.log("Processamento finalizado.");
+        console.log(
+            "PROCESSAMENTO FINALIZADO"
+        );
         console.log("--------------------------------");
 
     }
 
     catch(erro){
 
-        console.error(erro);
+        console.error(
+            "ERRO NO PROCESSAMENTO:",
+            erro
+        );
+
+
+        //--------------------------------------
+        // Liberação segura
+        //--------------------------------------
+
+        if(
+            imagemDiagnostico
+        ){
+
+            imagemDiagnostico.delete();
+
+            imagemDiagnostico = null;
+
+        }
+
+
+        if(folha){
+
+            folha.delete();
+
+            folha = null;
+
+        }
+
+
+        if(src){
+
+            src.delete();
+
+            src = null;
+
+        }
+
+
+        //--------------------------------------
+        // Mensagem
+        //--------------------------------------
 
         atualizarStatus(
 
@@ -299,6 +539,7 @@ function processarImagem(){
     }
 
 }
+
 
 /* ==========================================================
    FIM DO ARQUIVO

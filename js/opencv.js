@@ -1,13 +1,16 @@
 /* ==========================================================
    opencv.js
    AvaliaFácil
-   Versão 2.1
+   Versão 2.2
+
+   Integração com readers.js
 
    Estratégia:
    - Não utiliza correção de perspectiva
    - Mantém a fotografia original
    - Detecta os quatro marcadores
-   - Guarda imagem e marcadores para o readers.js
+   - Guarda imagem e marcadores
+   - Envia imagem e marcadores para o readers.js
 ========================================================== */
 
 
@@ -18,11 +21,17 @@
 let opencvCarregado = false;
 
 
+//----------------------------------------------------------
 // Imagem original carregada no OpenCV
+//----------------------------------------------------------
+
 let imagemAtual = null;
 
 
+//----------------------------------------------------------
 // Quatro marcadores encontrados
+//----------------------------------------------------------
+
 let marcadoresAtuais = [];
 
 
@@ -169,10 +178,9 @@ function processarImagem(){
         // Mostra a fotografia original
         //--------------------------------------
         //
-        // Não usamos cv.imshow().
+        // A própria tag <img> mostra a foto.
         //
-        // A própria tag <img> continua exibindo
-        // a fotografia capturada.
+        // Não usamos cv.imshow() para exibição.
         //--------------------------------------
 
         img.style.display =
@@ -180,7 +188,7 @@ function processarImagem(){
 
 
         //--------------------------------------
-        // Canvas não será utilizado nesta etapa
+        // Canvas não será utilizado
         //--------------------------------------
 
         if(canvas){
@@ -241,18 +249,22 @@ function processarImagem(){
         console.log(
             "IMAGEM CARREGADA NO OPENCV"
         );
+
         console.log(
             "Largura:",
             imagemAtual.cols
         );
+
         console.log(
             "Altura:",
             imagemAtual.rows
         );
+
         console.log(
             "Canais:",
             imagemAtual.channels()
         );
+
         console.log("--------------------------------");
 
 
@@ -336,7 +348,7 @@ function processarImagem(){
 
 
             //----------------------------------
-            // Mantém foto original visível
+            // Mantém foto original
             //----------------------------------
 
             img.style.display =
@@ -395,7 +407,7 @@ function processarImagem(){
 
 
         //--------------------------------------
-        // Diagnóstico dos quatro marcadores
+        // Diagnóstico dos marcadores
         //--------------------------------------
 
         console.log("--------------------------------");
@@ -435,39 +447,7 @@ function processarImagem(){
 
 
         //--------------------------------------
-        // Verifica novamente a imagem
-        //--------------------------------------
-
-        if(!imagemAtual){
-
-            atualizarStatus(
-                "Imagem foi perdida durante o processamento."
-            );
-
-            return;
-
-        }
-
-
-        //--------------------------------------
-        // IMPORTANTE
-        //
-        // Não fazemos:
-        //
-        // corrigirPerspectiva()
-        //
-        // Não fazemos:
-        //
-        // cv.imshow()
-        //
-        // Não desenhamos marcadores sobre
-        // a imagem original.
-        //--------------------------------------
-
-
-        //--------------------------------------
-        // Foto continua sendo mostrada
-        // pela própria tag <img>
+        // Mantém foto original
         //--------------------------------------
 
         img.style.display =
@@ -483,7 +463,7 @@ function processarImagem(){
 
 
         //--------------------------------------
-        // Resultado
+        // Status
         //--------------------------------------
 
         atualizarStatus(
@@ -497,33 +477,125 @@ function processarImagem(){
         );
         console.log("--------------------------------");
 
-        console.log(
-            "imagemAtual:",
-            imagemAtual.cols,
-            "x",
-            imagemAtual.rows
+
+        //--------------------------------------
+        // Verifica Reader
+        //--------------------------------------
+
+        if(
+
+            typeof lerRespostas !==
+            "function"
+
+        ){
+
+            console.warn(
+                "readers.js não foi carregado."
+            );
+
+
+            atualizarStatus(
+                "Reader não encontrado."
+            );
+
+
+            return;
+
+        }
+
+
+        //--------------------------------------
+        // Inicia Reader
+        //--------------------------------------
+        //
+        // IMPORTANTE:
+        //
+        // Enviamos a imagem ORIGINAL.
+        //
+        // Não existe perspectiva aqui.
+        //--------------------------------------
+
+        atualizarStatus(
+            "Lendo questão 1..."
         );
 
+
+        console.log("--------------------------------");
         console.log(
-            "marcadoresAtuais:",
-            marcadoresAtuais.length
+            "INICIANDO READER"
+        );
+        console.log("--------------------------------");
+
+
+        const respostas =
+            lerRespostas(
+
+                imagemAtual,
+
+                marcadoresAtuais
+
+            );
+
+
+        //--------------------------------------
+        // Resultado do Reader
+        //--------------------------------------
+
+        console.log("--------------------------------");
+        console.log(
+            "RESULTADO DO READER"
+        );
+        console.log("--------------------------------");
+
+        console.log(
+            respostas
         );
 
         console.log("--------------------------------");
 
 
         //--------------------------------------
-        // Não iniciamos o reader ainda
+        // Resultado da questão 1
         //--------------------------------------
-        //
-        // Na próxima etapa teremos:
-        //
-        // lerRespostas(
-        //     imagemAtual,
-        //     marcadoresAtuais
-        // );
-        //
+
+        if(
+
+            respostas &&
+
+            respostas[1] !== undefined
+
+        ){
+
+            atualizarStatus(
+
+                "Questão 1 = " +
+
+                respostas[1]
+
+            );
+
+        }
+
+        else{
+
+            atualizarStatus(
+                "Questão 1 não identificada."
+            );
+
+        }
+
+
         //--------------------------------------
+        // NÃO apagar imagemAtual aqui.
+        //
+        // O readers.js ainda pode precisar dela.
+        //--------------------------------------
+
+        console.log("--------------------------------");
+        console.log(
+            "READER FINALIZADO"
+        );
+        console.log("--------------------------------");
 
 
     }
@@ -541,7 +613,7 @@ function processarImagem(){
 
 
         //--------------------------------------
-        // Estado
+        // Limpa marcadores
         //--------------------------------------
 
         marcadoresAtuais = [];
@@ -592,7 +664,7 @@ function processarImagem(){
 
 
 //==========================================================
-// Função auxiliar para o futuro readers.js
+// Função auxiliar
 //==========================================================
 
 function obterImagemAtual(){
@@ -603,7 +675,7 @@ function obterImagemAtual(){
 
 
 //==========================================================
-// Função auxiliar para o futuro readers.js
+// Função auxiliar
 //==========================================================
 
 function obterMarcadoresAtuais(){

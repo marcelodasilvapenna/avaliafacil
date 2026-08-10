@@ -2,10 +2,28 @@
    opencv.js
    AvaliaFácil
    Versão 2.1
-   Correção de perspectiva reativada
+
+   Estratégia:
+   - Não utiliza correção de perspectiva
+   - Mantém a fotografia original
+   - Detecta os quatro marcadores
+   - Guarda imagem e marcadores para o readers.js
 ========================================================== */
 
+
+//==========================================================
+// Estado global do processamento
+//==========================================================
+
 let opencvCarregado = false;
+
+
+// Imagem original carregada no OpenCV
+let imagemAtual = null;
+
+
+// Quatro marcadores encontrados
+let marcadoresAtuais = [];
 
 
 //==========================================================
@@ -32,25 +50,76 @@ function opencvPronto(){
 
 
 //==========================================================
+// Limpa processamento anterior
+//==========================================================
+
+function limparImagemAtual(){
+
+    //--------------------------------------
+    // Libera imagem anterior
+    //--------------------------------------
+
+    if(imagemAtual){
+
+        try{
+
+            imagemAtual.delete();
+
+        }
+
+        catch(erro){
+
+            console.warn(
+                "Erro ao liberar imagem anterior:",
+                erro
+            );
+
+        }
+
+    }
+
+
+    //--------------------------------------
+    // Limpa referência
+    //--------------------------------------
+
+    imagemAtual = null;
+
+
+    //--------------------------------------
+    // Limpa marcadores
+    //--------------------------------------
+
+    marcadoresAtuais = [];
+
+
+    console.log(
+        "Processamento anterior liberado."
+    );
+
+}
+
+
+//==========================================================
 // Processamento principal
 //==========================================================
 
 function processarImagem(){
 
-    let src = null;
-
-    let imagemDiagnostico = null;
-
     try{
 
         //--------------------------------------
-        // OpenCV carregado?
+        // Verifica OpenCV
         //--------------------------------------
 
         if(!opencvCarregado){
 
             atualizarStatus(
                 "OpenCV não carregado."
+            );
+
+            console.warn(
+                "Tentativa de processar antes do OpenCV."
             );
 
             return;
@@ -65,9 +134,14 @@ function processarImagem(){
         const img =
             document.getElementById("foto");
 
+
         const canvas =
             document.getElementById("canvas");
 
+
+        //--------------------------------------
+        // Verifica imagem
+        //--------------------------------------
 
         if(!img){
 
@@ -75,15 +149,8 @@ function processarImagem(){
                 "Imagem não encontrada."
             );
 
-            return;
-
-        }
-
-
-        if(!canvas){
-
-            atualizarStatus(
-                "Canvas não encontrado."
+            console.error(
+                "Elemento #foto não encontrado."
             );
 
             return;
@@ -92,7 +159,40 @@ function processarImagem(){
 
 
         //--------------------------------------
-        // Lê imagem original
+        // Limpa processamento anterior
+        //--------------------------------------
+
+        limparImagemAtual();
+
+
+        //--------------------------------------
+        // Mostra a fotografia original
+        //--------------------------------------
+        //
+        // Não usamos cv.imshow().
+        //
+        // A própria tag <img> continua exibindo
+        // a fotografia capturada.
+        //--------------------------------------
+
+        img.style.display =
+            "block";
+
+
+        //--------------------------------------
+        // Canvas não será utilizado nesta etapa
+        //--------------------------------------
+
+        if(canvas){
+
+            canvas.style.display =
+                "none";
+
+        }
+
+
+        //--------------------------------------
+        // Status
         //--------------------------------------
 
         atualizarStatus(
@@ -100,18 +200,58 @@ function processarImagem(){
         );
 
 
-        src = cv.imread(img);
+        //--------------------------------------
+        // Carrega imagem no OpenCV
+        //--------------------------------------
 
+        imagemAtual =
+            cv.imread(img);
+
+
+        //--------------------------------------
+        // Verifica tamanho
+        //--------------------------------------
+
+        if(
+
+            !imagemAtual ||
+
+            imagemAtual.cols <= 0 ||
+
+            imagemAtual.rows <= 0
+
+        ){
+
+            atualizarStatus(
+                "Imagem inválida."
+            );
+
+            limparImagemAtual();
+
+            return;
+
+        }
+
+
+        //--------------------------------------
+        // Diagnóstico
+        //--------------------------------------
 
         console.log("--------------------------------");
-        console.log("IMAGEM ORIGINAL");
+        console.log(
+            "IMAGEM CARREGADA NO OPENCV"
+        );
         console.log(
             "Largura:",
-            src.cols
+            imagemAtual.cols
         );
         console.log(
             "Altura:",
-            src.rows
+            imagemAtual.rows
+        );
+        console.log(
+            "Canais:",
+            imagemAtual.channels()
         );
         console.log("--------------------------------");
 
@@ -126,28 +266,40 @@ function processarImagem(){
 
 
         const resultado =
-            detectarMarcadores(src);
+            detectarMarcadores(
+                imagemAtual
+            );
 
 
         //--------------------------------------
-        // Diagnóstico
+        // Diagnóstico do detector
         //--------------------------------------
 
         console.log("--------------------------------");
-        console.log("RETORNO DO DETECTOR");
-        console.log(resultado);
+        console.log(
+            "RETORNO DO DETECTOR"
+        );
+        console.log("--------------------------------");
+
+        console.log(
+            resultado
+        );
+
         console.log(
             "Encontrado:",
             resultado.encontrado
         );
+
         console.log(
             "Marcadores:",
             resultado.marcadores.length
         );
+
         console.log(
             "Score:",
             resultado.score
         );
+
         console.log("--------------------------------");
 
 
@@ -155,29 +307,54 @@ function processarImagem(){
         // Folha não encontrada
         //--------------------------------------
 
-        if(!resultado.encontrado){
+        if(
+
+            !resultado ||
+
+            !resultado.encontrado ||
+
+            !resultado.marcadores ||
+
+            resultado.marcadores.length !== 4
+
+        ){
+
+            //----------------------------------
+            // Limpa estado
+            //----------------------------------
+
+            marcadoresAtuais = [];
+
+
+            //----------------------------------
+            // Status
+            //----------------------------------
 
             atualizarStatus(
                 "Folha não encontrada."
             );
 
 
-            img.style.display =
-                "none";
+            //----------------------------------
+            // Mantém foto original visível
+            //----------------------------------
 
-            canvas.style.display =
+            img.style.display =
                 "block";
 
 
-            cv.imshow(
-                "canvas",
-                src
+            if(canvas){
+
+                canvas.style.display =
+                    "none";
+
+            }
+
+
+            console.warn(
+                "Detector não encontrou quatro marcadores."
             );
 
-
-            src.delete();
-
-            src = null;
 
             return;
 
@@ -193,154 +370,59 @@ function processarImagem(){
         );
 
 
-        console.log("--------------------------------");
-        console.log(
-            "4 MARCADORES DETECTADOS"
-        );
-        console.log("--------------------------------");
-
-
         //--------------------------------------
-        // Mostra marcadores somente
-        // em uma cópia para diagnóstico
+        // Guarda marcadores
         //--------------------------------------
 
-        imagemDiagnostico =
-            src.clone();
+        marcadoresAtuais =
+            resultado.marcadores.map(
 
+                m=>({
 
-        resultado.marcadores.forEach(m=>{
+                    cx: m.cx,
 
-            cv.circle(
+                    cy: m.cy,
 
-                imagemDiagnostico,
+                    area: m.area,
 
-                new cv.Point(
-                    m.cx,
-                    m.cy
-                ),
+                    largura: m.largura,
 
-                12,
+                    altura: m.altura
 
-                new cv.Scalar(
-                    255,
-                    0,
-                    0,
-                    255
-                ),
-
-                4
+                })
 
             );
 
-        });
-
 
         //--------------------------------------
-        // Exibe diagnóstico
-        //--------------------------------------
-
-        img.style.display =
-            "none";
-
-        canvas.style.display =
-            "block";
-
-
-        cv.imshow(
-            "canvas",
-            imagemDiagnostico
-        );
-
-
-        //--------------------------------------
-        // Libera cópia
-        //--------------------------------------
-
-        imagemDiagnostico.delete();
-
-        imagemDiagnostico = null;
-
-
-        //--------------------------------------
-        // Corrige perspectiva (substitui src)
-        //--------------------------------------
-
-        try {
-
-            atualizarStatus("Corrigindo perspectiva...");
-
-            // Se houver mais de 4 marcadores, seleciona os 4 maiores por área
-            let marcadoresParaCorrigir = resultado.marcadores;
-
-            if(marcadoresParaCorrigir.length > 4){
-                marcadoresParaCorrigir = marcadoresParaCorrigir.slice().sort((a,b)=> b.area - a.area).slice(0,4);
-            }
-
-            const imagemCorrigida = corrigirPerspectiva(src, marcadoresParaCorrigir);
-
-            // liberamos a imagem original e usamos a corrigida a partir de agora
-            src.delete();
-            src = imagemCorrigida;
-
-            console.log("--------------------------------");
-            console.log("PERSPECTIVA CORRIGIDA");
-            console.log("--------------------------------");
-
-            // Exibe a imagem corrigida
-            cv.imshow("canvas", src);
-
-        } catch (e) {
-
-            console.error("Falha ao corrigir perspectiva:", e);
-
-            atualizarStatus("Falha na correção de perspectiva — usando imagem original.");
-
-            // Em caso de erro, mantém a src original visível
-            cv.imshow("canvas", src);
-
-        }
-
-
-        //--------------------------------------
-        // Status
-        //--------------------------------------
-
-        atualizarStatus(
-            "Foto pronta para leitura."
-        );
-
-
-        //--------------------------------------
-        // Diagnóstico dos marcadores
+        // Diagnóstico dos quatro marcadores
         //--------------------------------------
 
         console.log("--------------------------------");
         console.log(
-            "COORDENADAS DOS MARCADORES"
+            "MARCADORES ATUAIS"
         );
         console.log("--------------------------------");
 
 
-        resultado.marcadores.forEach(
+        marcadoresAtuais.forEach(
 
             (m,index)=>{
 
                 console.log(
 
-                    index,
-
-                    "X:",
-
+                    "Marcador",
+                    index + 1,
+                    "| X:",
                     m.cx,
-
-                    "Y:",
-
+                    "| Y:",
                     m.cy,
-
-                    "Área:",
-
-                    m.area
+                    "| Área:",
+                    m.area,
+                    "| L:",
+                    m.largura,
+                    "| A:",
+                    m.altura
 
                 );
 
@@ -350,54 +432,107 @@ function processarImagem(){
 
 
         console.log("--------------------------------");
-        console.log(
-            "IMAGEM ORIGINAL PRONTA"
-        );
-        console.log("--------------------------------");
+
+
+        //--------------------------------------
+        // Verifica novamente a imagem
+        //--------------------------------------
+
+        if(!imagemAtual){
+
+            atualizarStatus(
+                "Imagem foi perdida durante o processamento."
+            );
+
+            return;
+
+        }
 
 
         //--------------------------------------
         // IMPORTANTE
         //
-        // Não apagamos src aqui.
+        // Não fazemos:
         //
-        // O próximo módulo, readers.js,
-        // precisará receber esta imagem.
+        // corrigirPerspectiva()
+        //
+        // Não fazemos:
+        //
+        // cv.imshow()
+        //
+        // Não desenhamos marcadores sobre
+        // a imagem original.
         //--------------------------------------
 
 
-        /*
-        ======================================================
-        PRÓXIMA ETAPA
+        //--------------------------------------
+        // Foto continua sendo mostrada
+        // pela própria tag <img>
+        //--------------------------------------
 
-        Aqui entraremos com:
+        img.style.display =
+            "block";
 
-        lerRespostas(
-            src,
-            resultado.marcadores
+
+        if(canvas){
+
+            canvas.style.display =
+                "none";
+
+        }
+
+
+        //--------------------------------------
+        // Resultado
+        //--------------------------------------
+
+        atualizarStatus(
+            "Foto pronta para leitura."
         );
 
-        Ainda não ativamos porque o
-        readers.js será criado agora.
-        ======================================================
-        */
+
+        console.log("--------------------------------");
+        console.log(
+            "FOTO PRONTA PARA LEITURA"
+        );
+        console.log("--------------------------------");
+
+        console.log(
+            "imagemAtual:",
+            imagemAtual.cols,
+            "x",
+            imagemAtual.rows
+        );
+
+        console.log(
+            "marcadoresAtuais:",
+            marcadoresAtuais.length
+        );
+
+        console.log("--------------------------------");
 
 
         //--------------------------------------
-        // Por enquanto, mantemos src
+        // Não iniciamos o reader ainda
         //--------------------------------------
-
-        /*
-         * src permanece em memória.
-         *
-         * Quando criarmos o readers.js,
-         * ele será responsável pela leitura.
-         */
+        //
+        // Na próxima etapa teremos:
+        //
+        // lerRespostas(
+        //     imagemAtual,
+        //     marcadoresAtuais
+        // );
+        //
+        //--------------------------------------
 
 
     }
 
     catch(erro){
+
+        //--------------------------------------
+        // Console
+        //--------------------------------------
 
         console.error(
             "ERRO NO PROCESSAMENTO:",
@@ -406,25 +541,37 @@ function processarImagem(){
 
 
         //--------------------------------------
-        // Liberação segura
+        // Estado
         //--------------------------------------
 
-        if(imagemDiagnostico){
+        marcadoresAtuais = [];
 
-            imagemDiagnostico.delete();
 
-            imagemDiagnostico = null;
+        //--------------------------------------
+        // Libera imagem
+        //--------------------------------------
+
+        if(imagemAtual){
+
+            try{
+
+                imagemAtual.delete();
+
+            }
+
+            catch(e){
+
+                console.warn(
+                    "Erro ao liberar imagem:",
+                    e
+                );
+
+            }
 
         }
 
 
-        if(src){
-
-            src.delete();
-
-            src = null;
-
-        }
+        imagemAtual = null;
 
 
         //--------------------------------------
@@ -445,93 +592,24 @@ function processarImagem(){
 
 
 //==========================================================
-// Funções auxiliares
+// Função auxiliar para o futuro readers.js
 //==========================================================
 
-/**
- * Corrige a perspectiva de uma imagem dado um array de 4 marcadores.
- * Cada marcador deve ter {cx, cy, area}.
- * Retorna uma nova cv.Mat com a imagem corrigida (é responsabilidade do chamador deletar quando não for mais necessária).
- */
-function corrigirPerspectiva(src, marcadores){
+function obterImagemAtual(){
 
-    if(!marcadores || marcadores.length < 4){
-        throw new Error("São necessários 4 marcadores para corrigir a perspectiva.");
-    }
+    return imagemAtual;
 
-    // Seleciona exatamente 4 marcadores (se houver mais, espera-se que o chamador já tenha filtrado os 4 desejados)
-    let pts = marcadores.slice(0,4).map(m => ({ x: m.cx, y: m.cy }));
+}
 
-    // Identifica os cantos por soma/diferença (mais robusto que ordenar por Y/X simples)
-    // tl: menor x+y, br: maior x+y
-    // tr: menor x-y, bl: maior x-y
-    let sums = pts.map(p => p.x + p.y);
-    let diffs = pts.map(p => p.x - p.y);
 
-    const idxMinSum = sums.indexOf(Math.min.apply(null, sums));
-    const idxMaxSum = sums.indexOf(Math.max.apply(null, sums));
-    const idxMinDiff = diffs.indexOf(Math.min.apply(null, diffs));
-    const idxMaxDiff = diffs.indexOf(Math.max.apply(null, diffs));
+//==========================================================
+// Função auxiliar para o futuro readers.js
+//==========================================================
 
-    // Construir ordem: tl, tr, br, bl
-    let tl = pts[idxMinSum];
-    let br = pts[idxMaxSum];
-    let tr = pts[idxMinDiff];
-    let bl = pts[idxMaxDiff];
+function obterMarcadoresAtuais(){
 
-    // Caso alguma referência coincida (p.ex. pontos quase colineares), fallback para ordenação por Y então X
-    if(new Set([idxMinSum, idxMaxSum, idxMinDiff, idxMaxDiff]).size < 4){
-        pts.sort((a,b) => a.y - b.y);
-        let top = pts.slice(0,2).sort((a,b) => a.x - b.x);
-        let bottom = pts.slice(2,4).sort((a,b) => a.x - b.x);
-        tl = top[0];
-        tr = top[1];
-        bl = bottom[0];
-        br = bottom[1];
-    }
+    return marcadoresAtuais;
 
-    function dist(a,b){ let dx = a.x - b.x; let dy = a.y - b.y; return Math.hypot(dx,dy); }
-
-    let widthA = dist(br, bl);
-    let widthB = dist(tr, tl);
-    let maxWidth = Math.max(Math.round(widthA), Math.round(widthB));
-
-    let heightA = dist(tr, br);
-    let heightB = dist(tl, bl);
-    let maxHeight = Math.max(Math.round(heightA), Math.round(heightB));
-
-    if(maxWidth <= 0 || maxHeight <= 0){
-        throw new Error("Dimensões calculadas inválidas para a perspectiva.");
-    }
-
-    // Criar matrizes de pontos (CV_32FC2)
-    let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-        tl.x, tl.y,
-        tr.x, tr.y,
-        br.x, br.y,
-        bl.x, bl.y
-    ]);
-
-    let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-        0, 0,
-        maxWidth - 1, 0,
-        maxWidth - 1, maxHeight - 1,
-        0, maxHeight - 1
-    ]);
-
-    let M = cv.getPerspectiveTransform(srcTri, dstTri);
-    let dst = new cv.Mat();
-    let dsize = new cv.Size(maxWidth, maxHeight);
-
-    // Aplica transformação de perspectiva
-    cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0,0,0,255));
-
-    // Limpeza
-    srcTri.delete();
-    dstTri.delete();
-    M.delete();
-
-    return dst;
 }
 
 

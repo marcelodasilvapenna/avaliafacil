@@ -2,7 +2,7 @@
    readers.js
    AvaliaFácil
 
-   Versão 0.3
+   Versão 0.4
 
    PRIMEIRO TESTE REAL DO LEITOR
 
@@ -12,6 +12,7 @@
    - Testa somente a questão 1
    - Alternativas A, B, C, D e E
    - Mostra o diagnóstico NA TELA DO CELULAR
+   - Não interfere nas funções do detector
 ========================================================== */
 
 
@@ -28,36 +29,25 @@ const ReaderConfig = {
     QUESTAO1: {
 
         //----------------------------------
-        // Posição vertical da questão 1
-        //----------------------------------
-        //
-        // Referência:
-        //
-        // 0 = linha dos marcadores superiores
-        // 1 = linha dos marcadores inferiores
-        //
+        // Posição vertical
         //----------------------------------
 
         Y: 0.295,
 
 
         //----------------------------------
-        // Posição horizontal das colunas
-        //----------------------------------
-        //
-        // Cada valor representa a posição
-        // da alternativa A.
+        // Posição das quatro colunas
         //----------------------------------
 
         COLUNAS: [
 
-            0.000,   // questões 1-10
+            0.000,
 
-            0.290,   // questões 11-20
+            0.290,
 
-            0.575,   // questões 21-30
+            0.575,
 
-            0.880    // questões 31-40
+            0.880
 
         ],
 
@@ -78,21 +68,21 @@ const ReaderConfig = {
     ANALISE: {
 
         //----------------------------------
-        // Raio relativo ao tamanho da folha
+        // Raio proporcional
         //----------------------------------
 
         RAIO_RELATIVO: 0.010,
 
 
         //----------------------------------
-        // Limite de intensidade
+        // Pixel considerado escuro
         //----------------------------------
 
         LIMIAR_ESCURO: 150,
 
 
         //----------------------------------
-        // Percentual mínimo
+        // Mínimo para considerar marcado
         //----------------------------------
 
         LIMIAR_PREENCHIMENTO: 0.18
@@ -103,14 +93,14 @@ const ReaderConfig = {
 
 
 //==========================================================
-// Estado
+// Estado do Reader
 //==========================================================
 
 let readerUltimaResposta = null;
 
 
 //==========================================================
-// Cria área de diagnóstico na tela
+// Cria painel de diagnóstico
 //==========================================================
 
 function criarPainelReader(){
@@ -122,7 +112,7 @@ function criarPainelReader(){
 
 
     //--------------------------------------
-    // Já existe?
+    // Já existe
     //--------------------------------------
 
     if(painel){
@@ -133,7 +123,7 @@ function criarPainelReader(){
 
 
     //--------------------------------------
-    // Cria painel
+    // Cria
     //--------------------------------------
 
     painel =
@@ -153,30 +143,23 @@ function criarPainelReader(){
     painel.style.margin =
         "15px";
 
-
     painel.style.padding =
         "18px";
-
 
     painel.style.borderRadius =
         "12px";
 
-
     painel.style.background =
         "#ffffff";
-
 
     painel.style.boxShadow =
         "0 2px 8px rgba(0,0,0,0.15)";
 
-
     painel.style.fontFamily =
         "Arial, sans-serif";
 
-
     painel.style.fontSize =
         "18px";
-
 
     painel.style.lineHeight =
         "1.6";
@@ -192,7 +175,13 @@ function criarPainelReader(){
         );
 
 
-    if(status && status.parentNode){
+    if(
+
+        status &&
+
+        status.parentNode
+
+    ){
 
         status.parentNode.insertBefore(
 
@@ -237,7 +226,7 @@ function mostrarDiagnosticoReader(
 
 
     //--------------------------------------
-    // Formata valor
+    // Formata
     //--------------------------------------
 
     function formatar(valor){
@@ -250,7 +239,7 @@ function mostrarDiagnosticoReader(
 
 
     //--------------------------------------
-    // Resultado
+    // HTML
     //--------------------------------------
 
     let html = "";
@@ -272,7 +261,6 @@ function mostrarDiagnosticoReader(
         "A: " +
         formatar(valores.A);
 
-
     html +=
         "<br>";
 
@@ -280,7 +268,6 @@ function mostrarDiagnosticoReader(
     html +=
         "B: " +
         formatar(valores.B);
-
 
     html +=
         "<br>";
@@ -290,7 +277,6 @@ function mostrarDiagnosticoReader(
         "C: " +
         formatar(valores.C);
 
-
     html +=
         "<br>";
 
@@ -298,7 +284,6 @@ function mostrarDiagnosticoReader(
     html +=
         "D: " +
         formatar(valores.D);
-
 
     html +=
         "<br>";
@@ -324,7 +309,7 @@ function mostrarDiagnosticoReader(
 
 
     //--------------------------------------
-    // Diagnóstico das posições
+    // Coordenadas
     //--------------------------------------
 
     if(pontos){
@@ -332,10 +317,10 @@ function mostrarDiagnosticoReader(
         html +=
             "<hr>";
 
-
         html +=
-            "<small>Posições detectadas</small>";
-
+            "<small>" +
+            "Posições analisadas:" +
+            "</small>";
 
         html +=
             "<br>";
@@ -350,7 +335,6 @@ function mostrarDiagnosticoReader(
             ")" +
             "</small>";
 
-
         html +=
             "<br>";
 
@@ -363,7 +347,6 @@ function mostrarDiagnosticoReader(
             Math.round(pontos.B.y) +
             ")" +
             "</small>";
-
 
         html +=
             "<br>";
@@ -378,7 +361,6 @@ function mostrarDiagnosticoReader(
             ")" +
             "</small>";
 
-
         html +=
             "<br>";
 
@@ -391,7 +373,6 @@ function mostrarDiagnosticoReader(
             Math.round(pontos.D.y) +
             ")" +
             "</small>";
-
 
         html +=
             "<br>";
@@ -416,7 +397,7 @@ function mostrarDiagnosticoReader(
 
 
 //==========================================================
-// Entrada principal
+// Função principal do Reader
 //==========================================================
 
 function lerRespostas(
@@ -427,13 +408,8 @@ function lerRespostas(
 
 ){
 
-    console.log(
-        "Reader iniciado."
-    );
-
-
     //--------------------------------------
-    // Limpa painel anterior
+    // Painel
     //--------------------------------------
 
     const painelAnterior =
@@ -487,11 +463,16 @@ function lerRespostas(
 
 
     //--------------------------------------
-    // Ordena marcadores
+    // IMPORTANTE
+    //
+    // Usa função com nome exclusivo do Reader.
+    //
+    // Não utiliza ordenarMarcadores(),
+    // pois essa função pertence ao detector.
     //--------------------------------------
 
     const pontos =
-        ordenarMarcadores(
+        ordenarMarcadoresReader(
             marcadores
         );
 
@@ -501,7 +482,7 @@ function lerRespostas(
     //--------------------------------------
 
     const resultado =
-        lerQuestao1(
+        lerQuestao1Reader(
 
             imagem,
 
@@ -519,7 +500,7 @@ function lerRespostas(
 
 
     //--------------------------------------
-    // Mostra na tela
+    // Mostra
     //--------------------------------------
 
     mostrarDiagnosticoReader(
@@ -534,7 +515,7 @@ function lerRespostas(
 
 
     //--------------------------------------
-    // Retorno compatível com opencv.js
+    // Retorno
     //--------------------------------------
 
     return {
@@ -547,10 +528,10 @@ function lerRespostas(
 
 
 //==========================================================
-// Ordena os marcadores
+// Ordena marcadores EXCLUSIVAMENTE para o Reader
 //==========================================================
 
-function ordenarMarcadores(
+function ordenarMarcadoresReader(
 
     marcadores
 
@@ -576,7 +557,7 @@ function ordenarMarcadores(
 
 
     //--------------------------------------
-    // Dois superiores
+    // Superiores
     //--------------------------------------
 
     const superiores =
@@ -588,7 +569,7 @@ function ordenarMarcadores(
 
 
     //--------------------------------------
-    // Dois inferiores
+    // Inferiores
     //--------------------------------------
 
     const inferiores =
@@ -622,7 +603,7 @@ function ordenarMarcadores(
 // Lê questão 1
 //==========================================================
 
-function lerQuestao1(
+function lerQuestao1Reader(
 
     imagem,
 
@@ -631,7 +612,7 @@ function lerQuestao1(
 ){
 
     //--------------------------------------
-    // Y da questão 1
+    // Posição vertical
     //--------------------------------------
 
     const y =
@@ -641,7 +622,7 @@ function lerQuestao1(
 
 
     //--------------------------------------
-    // X da primeira coluna
+    // Primeira coluna
     //--------------------------------------
 
     const xBase =
@@ -661,13 +642,13 @@ function lerQuestao1(
 
 
     //--------------------------------------
-    // Coordenadas
+    // Calcula pontos
     //--------------------------------------
 
     const pontos = {
 
         A:
-            transformarCoordenada(
+            transformarCoordenadaReader(
 
                 xBase,
 
@@ -678,7 +659,7 @@ function lerQuestao1(
             ),
 
         B:
-            transformarCoordenada(
+            transformarCoordenadaReader(
 
                 xBase + espacamento,
 
@@ -689,10 +670,9 @@ function lerQuestao1(
             ),
 
         C:
-            transformarCoordenada(
+            transformarCoordenadaReader(
 
-                xBase +
-                espacamento * 2,
+                xBase + espacamento * 2,
 
                 y,
 
@@ -701,10 +681,9 @@ function lerQuestao1(
             ),
 
         D:
-            transformarCoordenada(
+            transformarCoordenadaReader(
 
-                xBase +
-                espacamento * 3,
+                xBase + espacamento * 3,
 
                 y,
 
@@ -713,10 +692,9 @@ function lerQuestao1(
             ),
 
         E:
-            transformarCoordenada(
+            transformarCoordenadaReader(
 
-                xBase +
-                espacamento * 4,
+                xBase + espacamento * 4,
 
                 y,
 
@@ -734,35 +712,35 @@ function lerQuestao1(
     const valores = {
 
         A:
-            medirBolha(
+            medirBolhaReader(
                 imagem,
                 pontos.A,
                 marcadores
             ),
 
         B:
-            medirBolha(
+            medirBolhaReader(
                 imagem,
                 pontos.B,
                 marcadores
             ),
 
         C:
-            medirBolha(
+            medirBolhaReader(
                 imagem,
                 pontos.C,
                 marcadores
             ),
 
         D:
-            medirBolha(
+            medirBolhaReader(
                 imagem,
                 pontos.D,
                 marcadores
             ),
 
         E:
-            medirBolha(
+            medirBolhaReader(
                 imagem,
                 pontos.E,
                 marcadores
@@ -772,11 +750,11 @@ function lerQuestao1(
 
 
     //--------------------------------------
-    // Determina resposta
+    // Determina
     //--------------------------------------
 
     const resposta =
-        determinarResposta(
+        determinarRespostaReader(
             valores
         );
 
@@ -799,10 +777,10 @@ function lerQuestao1(
 
 
 //==========================================================
-// Mede o interior de uma bolha
+// Mede uma bolha
 //==========================================================
 
-function medirBolha(
+function medirBolhaReader(
 
     imagem,
 
@@ -813,7 +791,7 @@ function medirBolha(
 ){
 
     //--------------------------------------
-    // Verifica ponto
+    // Verifica
     //--------------------------------------
 
     if(!ponto){
@@ -840,7 +818,7 @@ function medirBolha(
 
 
     //--------------------------------------
-    // Raio proporcional
+    // Raio
     //--------------------------------------
 
     let raio =
@@ -858,11 +836,17 @@ function medirBolha(
 
     raio =
         Math.max(
+
             4,
+
             Math.min(
+
                 raio,
+
                 14
+
             )
+
         );
 
 
@@ -878,7 +862,7 @@ function medirBolha(
 
 
     //--------------------------------------
-    // Percorre círculo
+    // Região circular
     //--------------------------------------
 
     for(
@@ -925,18 +909,22 @@ function medirBolha(
 
             const px =
                 Math.round(
+
                     ponto.x + dx
+
                 );
 
 
             const py =
                 Math.round(
+
                     ponto.y + dy
+
                 );
 
 
             //----------------------------------
-            // Verifica imagem
+            // Fora da imagem
             //----------------------------------
 
             if(
@@ -964,6 +952,7 @@ function medirBolha(
                 imagem.ucharPtr(
 
                     py,
+
                     px
 
                 );
@@ -1003,7 +992,7 @@ function medirBolha(
 
 
             //----------------------------------
-            // Pixel escuro
+            // Escuro
             //----------------------------------
 
             if(
@@ -1029,7 +1018,7 @@ function medirBolha(
 
 
     //--------------------------------------
-    // Percentual
+    // Resultado
     //--------------------------------------
 
     if(total === 0){
@@ -1048,15 +1037,13 @@ function medirBolha(
 // Transformação geométrica
 //==========================================================
 //
-// IMPORTANTE:
+// Não cria uma imagem nova.
 //
-// Não criamos uma nova imagem.
-//
-// Apenas usamos a transformação matemática
-// para descobrir onde está a bolha na foto.
+// Apenas calcula onde uma coordenada virtual
+// da folha está localizada na fotografia.
 //==========================================================
 
-function transformarCoordenada(
+function transformarCoordenadaReader(
 
     x,
 
@@ -1067,7 +1054,7 @@ function transformarCoordenada(
 ){
 
     //--------------------------------------
-    // Pontos reais da fotografia
+    // Pontos da fotografia
     //--------------------------------------
 
     const src =
@@ -1101,14 +1088,6 @@ function transformarCoordenada(
     //--------------------------------------
     // Sistema virtual
     //--------------------------------------
-    //
-    // Os centros dos marcadores representam:
-    //
-    // TL = 0,0
-    // TR = 1,0
-    // BR = 1,1
-    // BL = 0,1
-    //--------------------------------------
 
     const dst =
         cv.matFromArray(
@@ -1135,7 +1114,7 @@ function transformarCoordenada(
 
 
     //--------------------------------------
-    // Matriz
+    // Transformação
     //--------------------------------------
 
     const matriz =
@@ -1149,7 +1128,7 @@ function transformarCoordenada(
 
 
     //--------------------------------------
-    // Ponto virtual
+    // Ponto
     //--------------------------------------
 
     const ponto =
@@ -1164,6 +1143,7 @@ function transformarCoordenada(
             [
 
                 x,
+
                 y
 
             ]
@@ -1235,7 +1215,7 @@ function transformarCoordenada(
 // Determina resposta
 //==========================================================
 
-function determinarResposta(
+function determinarRespostaReader(
 
     valores
 
@@ -1269,7 +1249,7 @@ function determinarResposta(
 
 
     //--------------------------------------
-    // Procura maior
+    // Procura
     //--------------------------------------
 
     alternativas.forEach(
@@ -1296,7 +1276,7 @@ function determinarResposta(
 
 
     //--------------------------------------
-    // Sem preenchimento suficiente
+    // Limite
     //--------------------------------------
 
     if(

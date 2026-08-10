@@ -339,93 +339,48 @@ function encontrarCandidatos(binaria){
     let hierarchy = new cv.Mat();
 
     cv.findContours(
-
         binaria,
-
         contours,
-
         hierarchy,
-
         cv.RETR_LIST,
-
         cv.CHAIN_APPROX_SIMPLE
-
     );
 
     let candidatos = [];
 
-    //------------------------------------------------------
-    // Diagnóstico
-    //------------------------------------------------------
+    const totalContornos = contours.size();
 
     let rejeitadosArea = 0;
-
     let rejeitadosForma = 0;
-
     let rejeitadosTamanho = 0;
-
     let rejeitadosProporcao = 0;
 
-    //------------------------------------------------------
-    // Tamanho da imagem
-    //------------------------------------------------------
-
     const imagemArea =
-
         binaria.cols *
-
         binaria.rows;
 
-    //------------------------------------------------------
-    // Limites de área
-    //
-    // Mantemos os valores do DetectorConfig,
-    // mas permitimos uma margem maior para fotos
-    // em diferentes distâncias.
-    //------------------------------------------------------
-
     const areaMinima = Math.max(
-
         20,
-
         Math.min(
-
             DetectorConfig.AREA_MINIMA,
-
             imagemArea * 0.000001
-
         )
-
     );
 
     const areaMaxima = Math.max(
-
         DetectorConfig.AREA_MAXIMA,
-
         imagemArea * 0.05
-
     );
 
-    //------------------------------------------------------
-    // Analisa cada contorno encontrado
-    //------------------------------------------------------
-
-    for(let i=0;i<contours.size();i++){
+    for(let i=0;i<totalContornos;i++){
 
         let contorno = contours.get(i);
 
         let area = cv.contourArea(contorno);
 
-        //----------------------------------
-        // Área
-        //----------------------------------
-
         if(
-
             area < areaMinima ||
-
             area > areaMaxima
-
         ){
 
             rejeitadosArea++;
@@ -433,19 +388,11 @@ function encontrarCandidatos(binaria){
             contorno.delete();
 
             continue;
-
         }
 
-        //----------------------------------
-        // Perímetro
-        //----------------------------------
-
         let perimetro = cv.arcLength(
-
             contorno,
-
             true
-
         );
 
         if(perimetro <= 0){
@@ -455,328 +402,169 @@ function encontrarCandidatos(binaria){
             contorno.delete();
 
             continue;
-
         }
-
-        //----------------------------------
-        // Aproxima polígono
-        //----------------------------------
 
         let aprox = new cv.Mat();
 
         cv.approxPolyDP(
-
             contorno,
-
             aprox,
-
             0.025 * perimetro,
-
             true
-
         );
-
-        //----------------------------------
-        // Aceitamos somente quadriláteros
-        //----------------------------------
 
         if(aprox.rows !== 4){
 
             rejeitadosForma++;
 
             aprox.delete();
-
             contorno.delete();
 
             continue;
-
         }
-
-        //----------------------------------
-        // Convexo
-        //----------------------------------
 
         if(!cv.isContourConvex(aprox)){
 
             rejeitadosForma++;
 
             aprox.delete();
-
             contorno.delete();
 
             continue;
-
         }
 
-        //----------------------------------
-        // Retângulo envolvente
-        //----------------------------------
-
         let rect = cv.boundingRect(
-
             aprox
-
         );
 
         let largura = rect.width;
-
         let altura = rect.height;
 
-        //----------------------------------
-        // Tamanho mínimo
-        //
-        // Reduzimos o mínimo para permitir
-        // marcadores fotografados de longe.
-        //----------------------------------
-
         if(
-
             largura < 6 ||
-
             altura < 6
-
         ){
 
             rejeitadosTamanho++;
 
             aprox.delete();
-
             contorno.delete();
 
             continue;
-
         }
 
-        //----------------------------------
-        // Proporção
-        //----------------------------------
-
         let proporcao =
-
-            Math.max(
-
-                largura,
-
-                altura
-
-            ) /
-
-            Math.min(
-
-                largura,
-
-                altura
-
-            );
-
-        //----------------------------------
-        // Tolerância maior para perspectiva
-        //----------------------------------
+            Math.max(largura,altura) /
+            Math.min(largura,altura);
 
         const proporcaoMaxima = Math.max(
-
             DetectorConfig.PROPORCAO_MAXIMA,
-
             2.5
-
         );
 
         if(
-
             proporcao >
-
             proporcaoMaxima
-
         ){
 
             rejeitadosProporcao++;
 
             aprox.delete();
-
             contorno.delete();
 
             continue;
-
         }
 
-        //----------------------------------
-        // Ocupação do retângulo
-        //
-        // Um marcador sólido deve ocupar boa
-        // parte do seu bounding box.
-        //----------------------------------
-
         const areaRetangulo =
-
             largura *
-
             altura;
 
         const ocupacao =
-
             area /
-
             areaRetangulo;
 
         if(
-
             ocupacao < 0.35
-
         ){
 
             rejeitadosForma++;
 
             aprox.delete();
-
             contorno.delete();
 
             continue;
-
         }
 
-        //----------------------------------
-        // Centro
-        //----------------------------------
-
         let cx =
-
             rect.x +
-
             largura / 2;
 
         let cy =
-
             rect.y +
-
             altura / 2;
 
-        //----------------------------------
-        // Salva candidato
-        //----------------------------------
-
         candidatos.push(
-
             new Marcador(
-
                 cx,
-
                 cy,
-
                 area,
-
                 largura,
-
                 altura
-
             )
-
         );
-
-        //----------------------------------
-        // Libera memória
-        //----------------------------------
 
         aprox.delete();
-
         contorno.delete();
-
     }
-
-    //------------------------------------------------------
-    // Libera OpenCV
-    //------------------------------------------------------
 
     hierarchy.delete();
-
     contours.delete();
 
-    //------------------------------------------------------
-    // Ordena por área
-    //------------------------------------------------------
-
     candidatos.sort(
-
         (a,b)=>b.area-a.area
-
     );
-
-    //------------------------------------------------------
-    // Limita quantidade
-    //------------------------------------------------------
 
     if(
-
         candidatos.length >
-
         DetectorConfig.MAX_CANDIDATOS
-
     ){
 
-        candidatos = candidatos.slice(
-
-            0,
-
-            DetectorConfig.MAX_CANDIDATOS
-
-        );
-
+        candidatos =
+            candidatos.slice(
+                0,
+                DetectorConfig.MAX_CANDIDATOS
+            );
     }
 
-    //------------------------------------------------------
-    // Diagnóstico detalhado
-    //------------------------------------------------------
-
     console.log(
-
         "Contornos analisados:",
-
-        contours.size
-
+        totalContornos
     );
 
     console.log(
-
         "Rejeitados por área:",
-
         rejeitadosArea
-
     );
 
     console.log(
-
         "Rejeitados por forma:",
-
         rejeitadosForma
-
     );
 
     console.log(
-
         "Rejeitados por tamanho:",
-
         rejeitadosTamanho
-
     );
 
     console.log(
-
         "Rejeitados por proporção:",
-
         rejeitadosProporcao
-
     );
 
     console.log(
-
         "Quadrados encontrados:",
-
         candidatos.length
-
     );
-
-    //------------------------------------------------------
-    // Retorno
-    //------------------------------------------------------
 
     return candidatos;
 
